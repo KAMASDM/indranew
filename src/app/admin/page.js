@@ -1,571 +1,438 @@
-// src/app/admin/page.js
-'use client';
-import { useState, useEffect } from 'react';
-import { db, storage } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import LoadingSpinner from '../../components/LoadingSpinner';
+"use client";
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import EventsAdmin from '../../components/admin/EventsAdmin';
+import InitiativesAdmin from '../../components/admin/InitiativesAdmin';
+import GalleryAdmin from '../../components/admin/GalleryAdmin';
+import VolunteersAdmin from '../../components/admin/VolunteersAdmin';
+import MessagesAdmin from '../../components/admin/MessagesAdmin';
+import NewsletterAdmin from '../../components/admin/NewsletterAdmin';
+import HeroAboutAdmin from '../../components/admin/HeroAboutAdmin';
 
-const Admin = () => {
+const navigationItems = [
+  { id: 'hero', label: 'Hero & About', icon: '🏠' },
+  { id: 'events', label: 'Events', icon: '📅' },
+  { id: 'initiatives', label: 'Initiatives', icon: '🎯' },
+  { id: 'media', label: 'Media', icon: '📷' },
+  { id: 'volunteers', label: 'Volunteers', icon: '👥' },
+  { id: 'messages', label: 'Messages', icon: '💬' },
+  { id: 'subscribers', label: 'Newsletter', icon: '✉️' }
+];
+
+export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('events');
-  const [events, setEvents] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [volunteers, setVolunteers] = useState([]);
-  const [subscribers, setSubscribers] = useState([]);
-  
-  const [formData, setFormData] = useState({
-    eventName: '',
-    eventDate: '',
-    eventDescription: '',
-    initiativeTitle: '',
-    initiativeDescription: '',
-    initiativeSlug: ''
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    events: [],
+    initiatives: [],
+    galleryImages: [],
+    volunteers: [],
+    messages: [],
+    subscribers: []
   });
 
-  const [files, setFiles] = useState({
-    heroImage: null,
-    galleryImage: null,
-    initiativeImage: null
-  });
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const [events, initiatives, gallery, volunteers, messages, subscribers] = await Promise.all([
+        getDocs(query(collection(db, 'events'), orderBy('createdAt', 'desc'))),
+        getDocs(query(collection(db, 'initiatives'), orderBy('createdAt', 'desc'))),
+        getDocs(query(collection(db, 'gallery'), orderBy('uploadedAt', 'desc'))),
+        getDocs(query(collection(db, 'volunteerApplications'), orderBy('submittedAt', 'desc'))),
+        getDocs(query(collection(db, 'contactMessages'), orderBy('submittedAt', 'desc'))),
+        getDocs(query(collection(db, 'newsletterSubscribers'), orderBy('subscribedAt', 'desc')))
+      ]);
 
-  const [galleryCaption, setGalleryCaption] = useState('');
-  const [loading, setLoading] = useState({ 
-    event: false, 
-    hero: false, 
-    gallery: false, 
-    initiative: false,
-    fetch: false 
-  });
+      setData({
+        events: events.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        initiatives: initiatives.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        galleryImages: gallery.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        volunteers: volunteers.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        messages: messages.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        subscribers: subscribers.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Fetch data on component mount
   useEffect(() => {
     fetchAllData();
   }, []);
 
-  const fetchAllData = async () => {
-    setLoading(prev => ({ ...prev, fetch: true }));
-    try {
-      // Fetch events
-      const eventsQuery = query(collection(db, 'events'), orderBy('date', 'desc'));
-      const eventsSnapshot = await getDocs(eventsQuery);
-      setEvents(eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Fetch contact messages
-      const messagesQuery = query(collection(db, 'contactMessages'), orderBy('submittedAt', 'desc'));
-      const messagesSnapshot = await getDocs(messagesQuery);
-      setMessages(messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Fetch volunteer applications
-      const volunteersQuery = query(collection(db, 'volunteerApplications'), orderBy('submittedAt', 'desc'));
-      const volunteersSnapshot = await getDocs(volunteersQuery);
-      setVolunteers(volunteersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Fetch newsletter subscribers
-      const subscribersQuery = query(collection(db, 'newsletterSubscribers'), orderBy('subscribedAt', 'desc'));
-      const subscribersSnapshot = await getDocs(subscribersQuery);
-      setSubscribers(subscribersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, fetch: false }));
-    }
-  };
-
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleFileChange = (e) => {
-    setFiles({ ...files, [e.target.name]: e.target.files[0] });
-  };
-
-  const handleAddEvent = async (e) => {
-    e.preventDefault();
-    setLoading(prev => ({ ...prev, event: true }));
-    try {
-      await addDoc(collection(db, 'events'), {
-        name: formData.eventName,
-        date: formData.eventDate,
-        description: formData.eventDescription,
-        createdAt: serverTimestamp()
-      });
-      alert('Event added successfully!');
-      setFormData({ ...formData, eventName: '', eventDate: '', eventDescription: '' });
-      fetchAllData();
-    } catch (error) {
-      console.error('Error adding event: ', error);
-      alert('Failed to add event.');
-    } finally {
-      setLoading(prev => ({ ...prev, event: false }));
-    }
-  };
-
-  const handleAddInitiative = async (e) => {
-    e.preventDefault();
-    setLoading(prev => ({ ...prev, initiative: true }));
-    
-    try {
-      let imageUrl = '';
-      if (files.initiativeImage) {
-        const storageRef = ref(storage, `initiatives/${Date.now()}_${files.initiativeImage.name}`);
-        await uploadBytes(storageRef, files.initiativeImage);
-        imageUrl = await getDownloadURL(storageRef);
-      }
-
-      await addDoc(collection(db, 'initiatives'), {
-        title: formData.initiativeTitle,
-        description: formData.initiativeDescription,
-        slug: formData.initiativeSlug,
-        imageUrl: imageUrl,
-        createdAt: serverTimestamp()
-      });
-
-      alert('Initiative added successfully!');
-      setFormData({ 
-        ...formData, 
-        initiativeTitle: '', 
-        initiativeDescription: '', 
-        initiativeSlug: '' 
-      });
-      setFiles({ ...files, initiativeImage: null });
-    } catch (error) {
-      console.error('Error adding initiative:', error);
-      alert('Failed to add initiative.');
-    } finally {
-      setLoading(prev => ({ ...prev, initiative: false }));
-    }
-  };
-
-  const handleImageUpload = async (image, path, collectionName, caption = null) => {
-    if (!image) return null;
-    const storageRef = ref(storage, `${path}/${Date.now()}_${image.name}`);
-    await uploadBytes(storageRef, image);
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    const docData = {
-      url: downloadURL,
-      uploadedAt: serverTimestamp()
+  const getDataCounts = () => {
+    return {
+      events: data.events.length,
+      initiatives: data.initiatives.length,
+      media: data.galleryImages.length,
+      volunteers: data.volunteers.length,
+      messages: data.messages.length,
+      subscribers: data.subscribers.length
     };
-    if (caption) {
-      docData.caption = caption;
-    }
-
-    await addDoc(collection(db, collectionName), docData);
-    return downloadURL;
   };
 
-  const handleHeroImageUpload = async (e) => {
-    e.preventDefault();
-    setLoading(prev => ({ ...prev, hero: true }));
-    try {
-      await handleImageUpload(files.heroImage, 'hero-images', 'heroImages');
-      alert('Hero image uploaded successfully!');
-      setFiles({ ...files, heroImage: null });
-    } catch (error) {
-      console.error('Error uploading hero image:', error);
-      alert('Failed to upload hero image.');
-    } finally {
-      setLoading(prev => ({ ...prev, hero: false }));
-    }
-  };
+  const counts = getDataCounts();
 
-  const handleGalleryImageUpload = async (e) => {
-    e.preventDefault();
-    setLoading(prev => ({ ...prev, gallery: true }));
-    try {
-      await handleImageUpload(files.galleryImage, 'gallery-images', 'gallery', galleryCaption);
-      alert('Gallery image uploaded successfully!');
-      setFiles({ ...files, galleryImage: null });
-      setGalleryCaption('');
-    } catch (error) {
-      console.error('Error uploading gallery image:', error);
-      alert('Failed to upload gallery image.');
-    } finally {
-      setLoading(prev => ({ ...prev, gallery: false }));
-    }
-  };
-
-  const deleteItem = async (collection_name, id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await deleteDoc(doc(db, collection_name, id));
-        alert('Item deleted successfully!');
-        fetchAllData();
-      } catch (error) {
-        console.error('Error deleting item:', error);
-        alert('Failed to delete item.');
-      }
-    }
-  };
-
-  const tabs = [
-    { id: 'events', label: 'Events', icon: '📅' },
-    { id: 'initiatives', label: 'Initiatives', icon: '🎯' },
-    { id: 'media', label: 'Media', icon: '🖼️' },
-    { id: 'messages', label: 'Messages', icon: '💬' },
-    { id: 'volunteers', label: 'Volunteers', icon: '🤝' },
-    { id: 'subscribers', label: 'Subscribers', icon: '📧' }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-8">
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage your foundation's content and data</p>
-        </header>
-
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-sm mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                    activeTab === tab.id
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-100 border-t-orange-500 mx-auto mb-4"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-4 h-4 bg-orange-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            <p className="text-gray-600 font-medium">Loading dashboard...</p>
+            <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
           </div>
         </div>
+      );
+    }
 
-        {loading.fetch ? (
-          <div className="text-center py-12">
-            <LoadingSpinner size="xl" />
-            <p className="text-gray-500 mt-4">Loading data...</p>
+    const containerClass = "space-y-8 animate-fadeIn";
+    
+    switch (activeTab) {
+      case 'hero':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Hero & About Management</h2>
+                  <p className="text-gray-600">Manage hero images and about us content</p>
+                </div>
+                <div className="text-6xl opacity-20">🏠</div>
+              </div>
+            </div>
+            <HeroAboutAdmin />
           </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Events Tab */}
-            {activeTab === 'events' && (
-              <div className="grid lg:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4">Add New Event</h2>
-                  <form onSubmit={handleAddEvent} className="space-y-4">
-                    <FormField
-                      label="Event Name"
-                      name="eventName"
-                      value={formData.eventName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <FormField
-                      label="Event Date"
-                      name="eventDate"
-                      type="date"
-                      value={formData.eventDate}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <FormField
-                      label="Description"
-                      name="eventDescription"
-                      type="textarea"
-                      value={formData.eventDescription}
-                      onChange={handleInputChange}
-                      rows={3}
-                    />
-                    <SubmitButton loading={loading.event} text="Add Event" />
-                  </form>
+        );
+      case 'events':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Events Management</h2>
+                  <p className="text-gray-600">Create and manage your community events</p>
+                </div>
+                <div className="text-6xl opacity-20">📅</div>
+              </div>
+            </div>
+            <EventsAdmin events={data.events} fetchAllData={fetchAllData} />
+          </div>
+        );
+      case 'initiatives':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Initiatives Management</h2>
+                  <p className="text-gray-600">Organize and showcase your community initiatives</p>
+                </div>
+                <div className="text-6xl opacity-20">🎯</div>
+              </div>
+            </div>
+            <InitiativesAdmin initiatives={data.initiatives} fetchAllData={fetchAllData} />
+          </div>
+        );
+      case 'media':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Media Gallery</h2>
+                  <p className="text-gray-600">Upload and manage your photo gallery</p>
+                </div>
+                <div className="text-6xl opacity-20">📷</div>
+              </div>
+            </div>
+            <GalleryAdmin galleryImages={data.galleryImages} fetchAllData={fetchAllData} />
+          </div>
+        );
+      case 'volunteers':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Volunteer Applications</h2>
+                  <p className="text-gray-600">Review and manage volunteer applications</p>
+                </div>
+                <div className="text-6xl opacity-20">👥</div>
+              </div>
+            </div>
+            <VolunteersAdmin volunteers={data.volunteers} fetchAllData={fetchAllData} />
+          </div>
+        );
+      case 'messages':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Contact Messages</h2>
+                  <p className="text-gray-600">View and respond to contact form submissions</p>
+                </div>
+                <div className="text-6xl opacity-20">💬</div>
+              </div>
+            </div>
+            <MessagesAdmin messages={data.messages} fetchAllData={fetchAllData} />
+          </div>
+        );
+      case 'subscribers':
+        return (
+          <div className={containerClass}>
+            <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl p-6 border border-teal-200 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Newsletter Subscribers</h2>
+                  <p className="text-gray-600">Manage your newsletter subscriber list</p>
+                </div>
+                <div className="text-6xl opacity-20">✉️</div>
+              </div>
+            </div>
+            <NewsletterAdmin subscribers={data.subscribers} fetchAllData={fetchAllData} />
+          </div>
+        );
+      default:
+        return (
+          <div className={containerClass}>
+            <EventsAdmin events={data.events} fetchAllData={fetchAllData} />
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex md:flex-shrink-0">
+        <div className="flex flex-col w-72">
+          <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+            <div className="flex items-center flex-shrink-0 px-4 mb-8">
+              <h1 className="text-xl font-bold text-gray-800">Admin Dashboard</h1>
+            </div>
+            
+            {/* Overview Stats */}
+            <div className="px-4 mb-6">
+              <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Overview</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {navigationItems.map((item) => (
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-lg">{item.icon}</div>
+                    <div className="text-xs font-medium text-gray-600 mt-1">{item.label}</div>
+                    <div className="text-lg font-bold text-orange-600">{counts[item.id] || 0}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 flex-grow flex flex-col">
+              <nav className="flex-1 px-2 space-y-1">
+                {navigationItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg w-full text-left transition-all duration-200 ${
+                      activeTab === item.id
+                        ? 'bg-orange-100 text-orange-900 border-r-4 border-orange-500'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="text-lg mr-3">{item.icon}</span>
+                    <span>{item.label}</span>
+                    <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
+                      activeTab === item.id ? 'bg-orange-200 text-orange-800' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {counts[item.id] || 0}
+                    </span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div className="md:hidden">
+          <div className="fixed inset-0 flex z-40">
+            <div
+              className="fixed inset-0 bg-gray-600 bg-opacity-75"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+              <div className="absolute top-0 right-0 -mr-12 pt-2">
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                >
+                  <span className="text-white text-xl">✕</span>
+                </button>
+              </div>
+              <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div className="flex-shrink-0 flex items-center px-4 mb-8">
+                  <h1 className="text-xl font-bold text-gray-800">Admin Dashboard</h1>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4">Recent Events</h2>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {events.map(event => (
-                      <div key={event.id} className="flex justify-between items-center p-3 border rounded-lg">
-                        <div>
-                          <h3 className="font-semibold">{event.name}</h3>
-                          <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()}</p>
-                        </div>
-                        <button
-                          onClick={() => deleteItem('events', event.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                        >
-                          🗑️
-                        </button>
+                {/* Mobile Overview Stats */}
+                <div className="px-4 mb-6">
+                  <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Overview</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {navigationItems.map((item) => (
+                      <div key={item.id} className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-lg">{item.icon}</div>
+                        <div className="text-xs font-medium text-gray-600 mt-1">{item.label}</div>
+                        <div className="text-lg font-bold text-orange-600">{counts[item.id] || 0}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Initiatives Tab */}
-            {activeTab === 'initiatives' && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-semibold mb-4">Add New Initiative</h2>
-                <form onSubmit={handleAddInitiative} className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <FormField
-                      label="Initiative Title"
-                      name="initiativeTitle"
-                      value={formData.initiativeTitle}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <FormField
-                      label="Slug (URL identifier)"
-                      name="initiativeSlug"
-                      value={formData.initiativeSlug}
-                      onChange={handleInputChange}
-                      placeholder="e.g., food-distribution-program"
-                      required
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Initiative Image
-                      </label>
-                      <input
-                        type="file"
-                        name="initiativeImage"
-                        onChange={handleFileChange}
-                        className="w-full border border-gray-300 rounded-md p-2 text-gray-900"
-                        accept="image/*"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <FormField
-                      label="Description"
-                      name="initiativeDescription"
-                      type="textarea"
-                      value={formData.initiativeDescription}
-                      onChange={handleInputChange}
-                      rows={8}
-                      required
-                    />
-                    <SubmitButton loading={loading.initiative} text="Add Initiative" className="mt-4" />
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Media Tab */}
-            {activeTab === 'media' && (
-              <div className="grid lg:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4">Upload Hero Image</h2>
-                  <form onSubmit={handleHeroImageUpload} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Image (latest one will be displayed)
-                      </label>
-                      <input
-                        type="file"
-                        name="heroImage"
-                        onChange={handleFileChange}
-                        className="w-full border border-gray-300 rounded-md p-2 text-gray-900"
-                        accept="image/*"
-                        required
-                      />
-                    </div>
-                    <SubmitButton loading={loading.hero} text="Upload Hero Image" />
-                  </form>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4">Upload to Gallery</h2>
-                  <form onSubmit={handleGalleryImageUpload} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Image
-                      </label>
-                      <input
-                        type="file"
-                        name="galleryImage"
-                        onChange={handleFileChange}
-                        className="w-full border border-gray-300 rounded-md p-2 text-gray-900"
-                        accept="image/*"
-                        required
-                      />
-                    </div>
-                    <FormField
-                      label="Caption (Optional)"
-                      value={galleryCaption}
-                      onChange={(e) => setGalleryCaption(e.target.value)}
-                    />
-                    <SubmitButton loading={loading.gallery} text="Upload to Gallery" />
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* Messages Tab */}
-            {activeTab === 'messages' && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-semibold mb-4">Contact Messages</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {messages.map(message => (
-                        <tr key={message.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {message.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {message.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {message.subject}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {message.submittedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              onClick={() => deleteItem('contactMessages', message.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Volunteers Tab */}
-            {activeTab === 'volunteers' && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-semibold mb-4">Volunteer Applications</h2>
-                <div className="grid gap-4">
-                  {volunteers.map(volunteer => (
-                    <div key={volunteer.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">{volunteer.name}</h3>
-                          <p className="text-gray-600">{volunteer.email}</p>
-                          <p className="text-gray-600">{volunteer.phone}</p>
-                          <p className="mt-2 text-sm text-gray-700">{volunteer.message}</p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Applied: {volunteer.submittedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => deleteItem('volunteerApplications', volunteer.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
+                <nav className="mt-8 flex-1 px-2 space-y-1">
+                  {navigationItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setSidebarOpen(false);
+                      }}
+                      className={`group flex items-center px-3 py-3 text-base font-medium rounded-lg w-full text-left transition-all duration-200 ${
+                        activeTab === item.id
+                          ? 'bg-orange-100 text-orange-900'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                    >
+                      <span className="text-xl mr-4">{item.icon}</span>
+                      <span>{item.label}</span>
+                      <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
+                        activeTab === item.id ? 'bg-orange-200 text-orange-800' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {counts[item.id] || 0}
+                      </span>
+                    </button>
                   ))}
-                </div>
+                </nav>
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Subscribers Tab */}
-            {activeTab === 'subscribers' && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-semibold mb-4">Newsletter Subscribers</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subscribed Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {subscribers.map(subscriber => (
-                        <tr key={subscriber.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {subscriber.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {subscriber.subscribedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              onClick={() => deleteItem('newsletterSubscribers', subscriber.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+      {/* Main Content */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Mobile Header */}
+        <div className="md:hidden">
+          <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow border-b border-gray-200">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500 md:hidden"
+            >
+              <span className="text-xl">☰</span>
+            </button>
+            <div className="flex-1 px-4 flex justify-between items-center">
+              <div className="flex items-center">
+                <span className="text-lg mr-2">
+                  {navigationItems.find(item => item.id === activeTab)?.icon}
+                </span>
+                <h1 className="text-lg font-medium text-gray-900">
+                  {navigationItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+                </h1>
               </div>
+              <div className="flex items-center space-x-4">
+                <button 
+                  onClick={fetchAllData}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="Refresh"
+                >
+                  <span className="text-lg">🔄</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Header - Desktop */}
+        <div className="hidden md:block bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">
+                {navigationItems.find(item => item.id === activeTab)?.icon}
+              </span>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {navigationItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Manage your {navigationItems.find(item => item.id === activeTab)?.label.toLowerCase()} and content
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={fetchAllData}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                title="Refresh Data"
+              >
+                <span className="mr-2">🔄</span>
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        <main className="flex-1 relative overflow-y-auto focus:outline-none pb-16 md:pb-0">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              {renderContent()}
+            </div>
+          </div>
+        </main>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 shadow-lg">
+          <div className="flex justify-around">
+            {navigationItems.slice(0, 5).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
+                  activeTab === item.id
+                    ? 'text-orange-600 bg-orange-50'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-xs mt-1 font-medium">{item.label}</span>
+                {counts[item.id] > 0 && (
+                  <span className={`absolute -top-1 -right-1 text-xs px-1.5 py-0.5 rounded-full ${
+                    activeTab === item.id ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
+                  }`}>
+                    {counts[item.id]}
+                  </span>
+                )}
+              </button>
+            ))}
+            {navigationItems.length > 5 && (
+              <button className="flex flex-col items-center py-2 px-3 rounded-lg text-gray-600">
+                <span className="text-lg">⋯</span>
+                <span className="text-xs mt-1 font-medium">More</span>
+              </button>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
-};
-
-// Helper Components
-const FormField = ({ label, name, type = 'text', value, onChange, required = false, placeholder = '', rows = 3 }) => (
-  <div>
-    <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-2">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    {type === 'textarea' ? (
-      <textarea
-        name={name}
-        id={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
-      />
-    ) : (
-      <input
-        type={type}
-        name={name}
-        id={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
-      />
-    )}
-  </div>
-);
-
-const SubmitButton = ({ loading, text, className = '' }) => (
-  <button
-    type="submit"
-    disabled={loading}
-    className={`w-full bg-orange-500 text-white font-bold py-3 px-6 rounded-md hover:bg-orange-600 transition duration-300 disabled:bg-gray-400 flex items-center justify-center ${className}`}
-  >
-    {loading ? (
-      <>
-        <LoadingSpinner size="sm" color="white" />
-        <span className="ml-2">Processing...</span>
-      </>
-    ) : (
-      text
-    )}
-  </button>
-);
-
-export default Admin;
+}
