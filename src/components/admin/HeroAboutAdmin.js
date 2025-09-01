@@ -165,10 +165,10 @@ export default function HeroAboutAdmin() {
   return (
     <div className="space-y-8">
       {/* Hero Images Management */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-8 py-6">
-          <h2 className="text-2xl font-bold text-white">Hero Images Management</h2>
-          <p className="text-indigo-100 mt-2">Upload and manage hero section background images</p>
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-white rounded-3xl shadow-2xl border-2 border-blue-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-100 to-indigo-100 px-8 py-6">
+          <h2 className="text-2xl font-extrabold text-blue-900">Hero Images Management</h2>
+          <p className="text-blue-700 mt-2">Upload and manage hero section background images</p>
         </div>
         
         <div className="p-8">
@@ -184,7 +184,7 @@ export default function HeroAboutAdmin() {
                   <input
                     type="file"
                     onChange={handleHeroFileChange}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl focus:border-indigo-400 focus:outline-none hover:border-indigo-300 transition-colors"
+                    className="w-full px-4 py-5 border-2 border-dashed border-blue-400 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-cyan-50 text-blue-900 font-semibold focus:border-blue-500 focus:outline-none hover:border-blue-600 transition-all duration-200 cursor-pointer"
                     accept="image/*"
                     required
                   />
@@ -206,7 +206,7 @@ export default function HeroAboutAdmin() {
                 <button
                   type="submit"
                   disabled={loading.hero || !heroFile}
-                  className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-900 font-extrabold py-3 px-6 rounded-xl border-2 border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >
                   {loading.hero ? (
                     <span className="flex items-center justify-center">
@@ -225,7 +225,7 @@ export default function HeroAboutAdmin() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Hero Images ({heroImages.length})</h3>
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {heroImages.map((image, index) => (
-                  <div key={image.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-indigo-200 transition-colors">
+                  <div key={image.id} className="flex items-center justify-between p-4 border-2 border-blue-100 rounded-xl hover:border-indigo-300 transition-colors bg-white">
                     <div className="flex items-center space-x-4">
                       <div className="relative">
                         <Image
@@ -251,7 +251,7 @@ export default function HeroAboutAdmin() {
                     <button
                       onClick={() => handleDeleteHeroImage(image.id, image.url)}
                       disabled={loading.delete}
-                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 font-bold"
                     >
                       {loading.delete ? <LoadingSpinner size="sm" color="gray" /> : 'Delete'}
                     </button>
@@ -272,10 +272,10 @@ export default function HeroAboutAdmin() {
       </div>
 
       {/* About Us Content Management */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-teal-500 to-teal-600 px-8 py-6">
-          <h2 className="text-2xl font-bold text-white">About Us Content</h2>
-          <p className="text-teal-100 mt-2">Manage your organization&apos;s about page content</p>
+      <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border-2 border-blue-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-100 px-8 py-6 border-b border-blue-100">
+          <h2 className="text-2xl font-extrabold text-blue-900">About Us Content</h2>
+          <p className="text-blue-700 mt-2">Manage your organization&apos;s about page content</p>
         </div>
         
         <div className="p-8">
@@ -289,7 +289,7 @@ export default function HeroAboutAdmin() {
                   type="text"
                   value={aboutContent.title}
                   onChange={(e) => handleAboutChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-teal-400 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-400 focus:outline-none transition-colors text-blue-900 bg-white"
                   placeholder="Enter about page title"
                 />
               </div>
@@ -301,7 +301,7 @@ export default function HeroAboutAdmin() {
                   value={aboutContent.mission}
                   onChange={(e) => handleAboutChange('mission', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-teal-400 focus:outline-none transition-colors resize-none"
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-400 focus:outline-none transition-colors resize-none text-blue-900 bg-white"
                   placeholder="Enter your mission statement"
                 />
               </div>
@@ -315,7 +315,7 @@ export default function HeroAboutAdmin() {
                 value={aboutContent.description}
                 onChange={(e) => handleAboutChange('description', e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-teal-400 focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-400 focus:outline-none transition-colors resize-none text-blue-900 bg-white"
                 placeholder="Enter detailed description about your organization"
               />
             </div>
@@ -328,7 +328,7 @@ export default function HeroAboutAdmin() {
                 value={aboutContent.vision}
                 onChange={(e) => handleAboutChange('vision', e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-teal-400 focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-400 focus:outline-none transition-colors resize-none text-blue-900 bg-white"
                 placeholder="Enter your vision statement"
               />
             </div>
@@ -355,13 +355,13 @@ export default function HeroAboutAdmin() {
                           type="text"
                           value={value}
                           onChange={(e) => updateValue(index, e.target.value)}
-                          className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:border-teal-400 focus:outline-none transition-colors"
+                          className="flex-1 px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-400 focus:outline-none transition-colors text-blue-900 bg-white"
                           placeholder={`Core value ${index + 1}`}
                         />
                         <button
                           type="button"
                           onClick={() => removeValue(index)}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors font-bold"
                         >
                           Remove
                         </button>
@@ -383,7 +383,7 @@ export default function HeroAboutAdmin() {
             <button
               type="submit"
               disabled={loading.about}
-              className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-4 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold py-4 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {loading.about ? (
                 <span className="flex items-center justify-center">

@@ -140,8 +140,8 @@ const Footer = () => {
         </svg>
       ),
       label: 'Email',
-      value: 'contact@indraprasth.org',
-      link: 'mailto:contact@indraprasth.org'
+      value: 'contact@indraprasthfoundation.org',
+      link: 'mailto:contact@indraprasthfoundation.org'
     },
     {
       icon: (
@@ -150,8 +150,8 @@ const Footer = () => {
         </svg>
       ),
       label: 'Phone',
-      value: '+91 12345 67890',
-      link: 'tel:+911234567890'
+      value: '+91 8780899424',
+      link: 'tel:+918780899424'
     }
   ];
 

@@ -59,13 +59,13 @@ const ContactPage = () => {
         </svg>
       ),
       details: [
-        '+91 12345 67890',
+        '+91 8780899424',
         'Available: Mon-Fri 9AM-7PM',
         'Emergency: 24/7'
       ],
       action: {
         text: 'Call Now',
-        href: 'tel:+911234567890'
+        href: 'tel:+918780899424'
       }
     },
     {
@@ -76,8 +76,7 @@ const ContactPage = () => {
         </svg>
       ),
       details: [
-        'contact@indraprasth.org',
-        'info@indraprasth.org',
+        'contact@indraprasthfoundation.org',
         'Response time: Within 24 hours'
       ],
       action: {

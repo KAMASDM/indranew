@@ -9,7 +9,7 @@ import Image from 'next/image';
 function FormField({ label, name, type = 'text', value, onChange, required = false, placeholder = '', rows = 3, error }) {
   return (
     <div className="space-y-2">
-      <label htmlFor={name} className="flex items-center text-sm font-semibold text-gray-800">
+      <label htmlFor={name} className="flex items-center text-sm font-extrabold text-blue-900">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -23,7 +23,7 @@ function FormField({ label, name, type = 'text', value, onChange, required = fal
             required={required}
             placeholder={placeholder}
             rows={rows}
-            className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm transition-all duration-200 focus:ring-4 focus:ring-orange-100 focus:border-orange-400 hover:border-orange-300 text-gray-900 placeholder-gray-400 resize-none ${
+            className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm transition-all duration-200 focus:ring-4 focus:ring-orange-100 focus:border-orange-400 hover:border-orange-300 text-gray-800 placeholder-gray-400 resize-none ${
               error ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
             }`}
           />
@@ -36,7 +36,7 @@ function FormField({ label, name, type = 'text', value, onChange, required = fal
             onChange={onChange}
             required={required}
             placeholder={placeholder}
-            className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm transition-all duration-200 focus:ring-4 focus:ring-orange-100 focus:border-orange-400 hover:border-orange-300 text-gray-900 placeholder-gray-400 ${
+            className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm transition-all duration-200 focus:ring-4 focus:ring-orange-100 focus:border-orange-400 hover:border-orange-300 text-gray-800 placeholder-gray-400 ${
               error ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
             }`}
           />
@@ -57,7 +57,7 @@ function SubmitButton({ loading, text, className = '' }) {
     <button
       type="submit"
       disabled={loading}
-      className={`relative w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 px-8 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none ${className}`}
+      className={`relative w-full bg-gradient-to-br from-pink-500 via-indigo-500 to-blue-500 text-black font-extrabold text-lg py-5 px-10 rounded-3xl border-4 border-white shadow-2xl hover:from-pink-600 hover:to-blue-600 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none ${className}`}
     >
       {loading ? (
         <div className="flex items-center justify-center">
@@ -65,10 +65,10 @@ function SubmitButton({ loading, text, className = '' }) {
           <span className="ml-3">Processing...</span>
         </div>
       ) : (
-        <span className="flex items-center justify-center">
-          <span className="mr-2">✨</span>
-          {text}
-        </span>
+        <>
+          <span className="text-2xl">🚀</span>
+          <span>{text}</span>
+        </>
       )}
     </button>
   );
@@ -342,15 +342,14 @@ export default function EventsAdmin({ events, fetchAllData }) {
     <div className="grid xl:grid-cols-3 gap-8">
       {/* Add Event Form */}
       <div className="xl:col-span-1">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-8 py-6">
-            <h2 className="text-2xl font-bold text-white flex items-center">
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-white rounded-3xl shadow-2xl border-2 border-blue-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+            <h2 className="text-2xl font-extrabold text-white flex items-center">
               <span className="mr-3">📅</span>
-              Add New Event
+              <p className='text-indigo-800 mt-2'>Add New Event</p>
             </h2>
-            <p className="text-orange-100 mt-2">Create engaging community events</p>
+            <p className="text-indigo-800 mt-2">Create engaging community events</p>
           </div>
-          
           <div className="p-8">
             <form onSubmit={handleAddEvent} className="space-y-6">
               <FormField
@@ -362,7 +361,6 @@ export default function EventsAdmin({ events, fetchAllData }) {
                 placeholder="Enter event title"
                 error={errors.eventName}
               />
-              
               <div className="grid grid-cols-1 gap-6">
                 <FormField
                   label="Start Date"
@@ -383,7 +381,6 @@ export default function EventsAdmin({ events, fetchAllData }) {
                   error={errors.eventEndDate}
                 />
               </div>
-              
               <FormField
                 label="Description"
                 name="eventDescription"
@@ -395,7 +392,6 @@ export default function EventsAdmin({ events, fetchAllData }) {
                 placeholder="Describe your event in detail..."
                 error={errors.eventDescription}
               />
-              
               <FormField
                 label="Google Map URL"
                 name="eventMapUrl"
@@ -405,22 +401,23 @@ export default function EventsAdmin({ events, fetchAllData }) {
                 placeholder="https://maps.google.com/..."
                 error={errors.eventMapUrl}
               />
-              
               <div className="space-y-3">
-                <label className="flex items-center text-sm font-semibold text-gray-800">
+                <label className="flex items-center text-sm font-semibold text-blue-800">
                   Event Images <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     type="file"
                     name="eventImages"
                     onChange={handleFileChange}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 focus:border-orange-400 focus:outline-none hover:border-orange-300 transition-colors"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     accept="image/*"
                     multiple
                   />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-gray-400 text-sm">📤 Drop images here or click to browse</span>
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-cyan-50 py-8 px-4 transition-all duration-200 group-hover:border-blue-600 group-hover:bg-blue-50">
+                    <span className="text-4xl mb-2 text-blue-400">📤</span>
+                    <span className="text-blue-700 font-semibold text-base">Drag & Drop or Click to Upload Images</span>
+                    <span className="text-blue-400 text-xs mt-1">(JPG, PNG, WEBP up to 5MB each)</span>
                   </div>
                 </div>
                 {errors.eventImages && (
@@ -437,7 +434,7 @@ export default function EventsAdmin({ events, fetchAllData }) {
                           alt={`Preview ${idx+1}`}
                           width={100}
                           height={80}
-                          className="rounded-xl object-cover w-full h-20 border-2 border-gray-200"
+                          className="rounded-xl object-cover w-full h-20 border-2 border-blue-200"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 rounded-xl transition-all duration-200"></div>
                       </div>
@@ -445,34 +442,31 @@ export default function EventsAdmin({ events, fetchAllData }) {
                   </div>
                 )}
               </div>
-              
-              <SubmitButton loading={loading.event} text="Create Event" />
+              <SubmitButton loading={loading.event} text="Create Event" color="black" />
             </form>
           </div>
         </div>
       </div>
-
       {/* Events List */}
       <div className="xl:col-span-2">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-b border-gray-200">
+        <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-3xl shadow-2xl border-2 border-blue-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-100 px-8 py-6 border-b border-blue-100">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                <h2 className="text-2xl font-extrabold text-blue-900 flex items-center">
                   <span className="mr-3">📋</span>
                   Recent Events
                 </h2>
-                <p className="text-gray-600 mt-1">Manage your community events</p>
+                <p className="text-blue-700 mt-1">Manage your community events</p>
               </div>
               <button
                 onClick={() => alert('Export CSV functionality can be implemented here')}
-                className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
+                className="px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium shadow-md hover:shadow-lg"
               >
                 📊 Export CSV
               </button>
             </div>
           </div>
-          
           <div className="p-8">
             <div className="space-y-6 max-h-[800px] overflow-y-auto">
               {events.map(eventData => (
@@ -500,8 +494,8 @@ export default function EventsAdmin({ events, fetchAllData }) {
               {events.length === 0 && (
                 <div className="text-center py-16">
                   <div className="text-6xl mb-4">📅</div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">No events yet</h3>
-                  <p className="text-gray-600">Create your first community event to get started!</p>
+                  <h3 className="text-xl font-semibold text-blue-800 mb-2">No events yet</h3>
+                  <p className="text-blue-600">Create your first community event to get started!</p>
                 </div>
               )}
             </div>

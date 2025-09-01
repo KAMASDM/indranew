@@ -1,6 +1,7 @@
 
 @import "tailwindcss";
 
+
 :root {
   --background: #f8fafc; /* subtle light gray for clarity */
   --foreground: #171717;
@@ -195,7 +196,7 @@ html {
 /* Text selection */
 ::selection {
   background: var(--teal-secondary);
-  color: white;
+  color: rgb(12, 10, 10);
 }
 
 /* Print styles */

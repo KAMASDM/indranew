@@ -24,14 +24,18 @@ const GalleryPage = () => {
 
   const IMAGES_PER_PAGE = 12;
 
-  const categories = [
-    { id: 'all', name: 'All Photos', icon: '🖼️' },
-    { id: 'events', name: 'Events', icon: '🎉' },
-    { id: 'rasodu', name: 'Rasodu Initiative', icon: '🍽️' },
-    { id: 'education', name: 'Education Support', icon: '📚' },
-    { id: 'community', name: 'Community Service', icon: '🤝' },
-    { id: 'volunteers', name: 'Our Volunteers', icon: '👥' }
-  ];
+  const categories = useMemo(() => {
+    const allCategories = new Set(images.map(image => image.category).filter(Boolean));
+    const uniqueCategories = [
+      { id: 'all', name: 'All Photos', icon: '🖼️' },
+      ...Array.from(allCategories).map(cat => ({
+        id: cat,
+        name: cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        icon: '📷'
+      }))
+    ];
+    return uniqueCategories;
+  }, [images]);
 
   const fetchImages = async (isLoadMore = false, category = selectedCategory) => {
     try {
@@ -70,7 +74,7 @@ const GalleryPage = () => {
         id: doc.id,
         ...doc.data(),
         caption: doc.data().caption || '',
-        category: doc.data().category || 'community',
+        category: doc.data().category || 'general',
         uploadedAt: doc.data().uploadedAt || null
       }));
 
@@ -232,9 +236,9 @@ const GalleryPage = () => {
       <Navbar />
       <div className="pt-20">
         <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-20 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10"></div>
+          <div className="absolute inset-0 bg-black opacity-30"></div>
           <div className="relative z-10">
-            <h1 className="text-5xl bg-grey font-bold mb-4">Our Gallery</h1>
+            <h1 className="text-5xl font-bold mb-4">Our Gallery</h1>
             <p className="text-xl mb-6">Capturing moments of hope, compassion, and community impact</p>
             <div className="max-w-2xl mx-auto">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6">

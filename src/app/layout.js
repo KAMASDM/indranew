@@ -1,6 +1,7 @@
-// src/app/layout.js
-
 import "./globals.css";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import MobileBottomNav from "../components/MobileBottomNav";
 
 export const metadata = {
   title: "Indraprasth Foundation",
@@ -10,7 +11,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="pb-16 lg:pb-0">
+        <Navbar />
+        {children}
+        {/* <Footer /> */}
+        <MobileBottomNav />
+      </body>
     </html>
   );
 }

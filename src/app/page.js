@@ -1,4 +1,4 @@
-// Enhanced src/app/page.js - Fixed Homepage Design with Proper Image Loading
+// Enhanced Mobile-First Homepage with Bottom Navigation
 'use client';
 import { useEffect, useState } from 'react';
 import { db } from '../lib/firebase';
@@ -12,7 +12,7 @@ import BackToTop from '../components/BackToTop';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Image from 'next/image';
 import Link from 'next/link';
-
+import ganesh from '../../src/img/ganesh.jpeg';
 // Local fallback images
 const FALLBACK_IMAGES = {
   food: '/images/fallbacks/food-security.jpg',
@@ -39,16 +39,16 @@ const HomePage = () => {
   const [galleryError, setGalleryError] = useState(null);
   const [galleryImageStates, setGalleryImageStates] = useState({});
   const [galleryImageErrors, setGalleryImageErrors] = useState({});
+  const [expandedCards, setExpandedCards] = useState({});
+  const [showMobileNav, setShowMobileNav] = useState(false);
 
-// Default initiatives if database is empty - using placehold.co
+// Default initiatives with proper fallbacks
 const defaultInitiatives = [
   {
     id: 'rasodu',
     name: "Indraprasth nu Rasodu",
-    description: "Providing over 200,000 free, nutritious meals to the needy.",
-    // Updated URL
+    description: "Providing over 200,000 free, nutritious meals to the needy through our community kitchen program. We serve fresh, healthy food daily to underprivileged families, homeless individuals, and anyone in need of a warm meal.",
     icon: "https://placehold.co/400x300/10B981/ffffff?text=Food+Security",
-    // Updated URL
     imageUrl: "https://placehold.co/800x600/10B981/ffffff?text=Rasodu+Initiative",
     link: "/initiatives/indraprasth-nu-rasodu",
     impact: "200,000+ Meals Served",
@@ -57,10 +57,8 @@ const defaultInitiatives = [
   {
     id: 'education',
     name: "Educational Support",
-    description: "Distributing notebooks and supplies to underprivileged students.",
-    // Updated URL
+    description: "Distributing notebooks, supplies, and educational materials to underprivileged students. We believe education is the key to breaking the cycle of poverty and creating opportunities for a better future.",
     icon: "https://placehold.co/400x300/3B82F6/ffffff?text=Education",
-    // Updated URL
     imageUrl: "https://placehold.co/800x600/3B82F6/ffffff?text=Education+Support",
     link: "/initiatives/educational-support",
     impact: "1,500+ Students Supported",
@@ -69,10 +67,8 @@ const defaultInitiatives = [
   {
     id: 'blankets',
     name: "Blanket & Footwear Drive",
-    description: "Offering warmth and comfort to homeless individuals during winters.",
-    // Updated URL
+    description: "Offering warmth and comfort to homeless individuals during winters. Our annual drive provides blankets, warm clothing, and footwear to those who need it most during the cold season.",
     icon: "https://placehold.co/400x300/8B5CF6/ffffff?text=Basic+Needs",
-    // Updated URL
     imageUrl: "https://placehold.co/800x600/8B5CF6/ffffff?text=Blanket+Drive",
     link: "/initiatives/blanket-footwear-drive",
     impact: "3,000+ Items Distributed",
@@ -81,10 +77,8 @@ const defaultInitiatives = [
   {
     id: 'ganesh',
     name: "Eco-friendly Ganesh Utsav",
-    description: "Promoting environmental consciousness during festivals.",
-    // Updated URL
+    description: "Promoting environmental consciousness during festivals by encouraging eco-friendly celebrations, clay idols, and sustainable practices that honor tradition while protecting our environment.",
     icon: "https://placehold.co/400x300/059669/ffffff?text=Environment",
-    // Updated URL
     imageUrl: "https://placehold.co/800x600/059669/ffffff?text=Eco+Ganesh",
     link: "/initiatives/eco-friendly-ganesh-utsav",
     impact: "50+ Communities Engaged",
@@ -96,7 +90,7 @@ const defaultInitiatives = [
     {
       title: "100% Transparency",
       description: "Every rupee is tracked and its impact documented with complete transparency for our donors.",
-      icon: "🔍",
+      icon: "💎",
       color: "blue"
     },
     {
@@ -114,16 +108,39 @@ const defaultInitiatives = [
     {
       title: "Local Expertise",
       description: "Deep understanding of Vadodara's needs through years of dedicated community service.",
-      icon: "🏡",
+      icon: "🏠",
       color: "purple"
     }
   ];
+
+  // Mobile bottom navigation items
+  const bottomNavItems = [
+    { name: 'Home', href: '/', icon: '🏠', active: true },
+    { name: 'Initiatives', href: '/initiatives', icon: '💡' },
+    { name: 'Events', href: '/events', icon: '📅' },
+    { name: 'Donate', href: '/donate', icon: '❤️' },
+    { name: 'Contact', href: '/contact', icon: '📞' }
+  ];
+
+  // Text truncation function
+  const truncateText = (text, maxLength = 120) => {
+    if (!text || text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + '...';
+  };
+
+  // Toggle card expansion
+  const toggleCardExpansion = (cardId) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [cardId]: !prev[cardId]
+    }));
+  };
 
   // Improved image loading handler with better fallbacks
   const handleImageError = (e, fallbackType = 'default') => {
     console.error('Image failed to load, using fallback:', e.target.src);
     e.target.src = FALLBACK_IMAGES[fallbackType] || FALLBACK_IMAGES.default;
-    e.target.onerror = null; // Prevent infinite loop
+    e.target.onerror = null;
   };
 
   // Image loading handlers for gallery
@@ -149,17 +166,7 @@ const defaultInitiatives = [
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Hero Images
-        try {
-          const heroQuery = query(collection(db, 'heroImages'), orderBy('uploadedAt', 'desc'));
-          const heroSnapshot = await getDocs(heroQuery);
-          if (!heroSnapshot.empty) {
-            setHeroImages(heroSnapshot.docs.map(doc => doc.data()));
-          }
-        } catch (error) {
-          console.error("Error fetching hero images:", error);
-        }
-
+        
         // Initiatives
         try {
           const initiativesQuery = query(collection(db, 'initiatives'), orderBy('createdAt', 'desc'), limit(4));
@@ -205,7 +212,6 @@ const defaultInitiatives = [
           }));
           setGallery(galleryData);
           setGalleryError(null);
-          // Initialize loading states for gallery
           const galleryLoadingStates = {};
           galleryData.forEach((_, index) => {
             galleryLoadingStates[index] = true;
@@ -238,7 +244,7 @@ const defaultInitiatives = [
     fetchData();
   }, []);
 
-  // Share Your Story submit handler
+  // Share Your Story handlers
   const handleStoryChange = (e) => {
     setStoryForm({ ...storyForm, [e.target.name]: e.target.value });
     setStoryError('');
@@ -269,16 +275,6 @@ const defaultInitiatives = [
     }
   };
 
-  // Auto-rotate initiatives
-  useEffect(() => {
-    if (initiatives.length > 1) {
-      const interval = setInterval(() => {
-        setActiveInitiative(prev => (prev + 1) % initiatives.length);
-      }, 6000);
-      return () => clearInterval(interval);
-    }
-  }, [initiatives.length]);
-
   // Function to get appropriate fallback based on category
   const getFallbackImage = (category) => {
     switch(category) {
@@ -291,177 +287,121 @@ const defaultInitiatives = [
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
       <Navbar />
+      
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        <div className="grid grid-cols-5 h-16">
+          {bottomNavItems.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={`flex flex-col items-center justify-center text-xs transition-colors duration-200 ${
+                item.active 
+                  ? 'text-blue-600 bg-blue-50' 
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-xl mb-1">{item.icon}</span>
+              <span className="font-medium">{item.name}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+
       <main className="pt-16">
         <Hero />
         <ImpactStats />
 
-        {/* Initiatives Section - Completely Redesigned */}
-        <section className="py-24 bg-gradient-to-b from-white to-gray-50 border-y border-gray-200">
-          <div className="container mx-auto px-6">
+        {/* Initiatives Section - Mobile-First Design */}
+        <section className="py-12 lg:py-24 bg-gradient-to-b from-white to-gray-50">
+          <div className="px-4 lg:px-6 max-w-7xl mx-auto">
             {/* Section Header */}
-            <div className="text-center mb-16">
-              <div className="inline-block bg-blue-600 text-white px-6 py-2 rounded-full text-sm font-semibold mb-6 shadow-lg">
+            <div className="text-center mb-8 lg:mb-16">
+              <div className="inline-block bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-4 lg:mb-6">
                 Our Impact Areas
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-4 lg:mb-6">
                 Key Initiatives
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
                 Comprehensive programs addressing core community needs with measurable, sustainable impact.
               </p>
             </div>
 
             {loading ? (
-              <div className="text-center py-20">
-                <div className="inline-flex items-center space-x-4 bg-white rounded-lg shadow-lg px-8 py-6">
+              <div className="text-center py-12 lg:py-20">
+                <div className="inline-flex items-center space-x-4 bg-white rounded-lg shadow-lg px-6 py-4 lg:px-8 lg:py-6">
                   <LoadingSpinner size="lg" />
                   <span className="text-gray-600 font-medium">Loading initiatives...</span>
                 </div>
               </div>
             ) : (
               <>
-                {/* Featured Initiative - Full Width Card */}
-                {initiatives.length > 0 && (
-                  <div className="mb-20">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl mx-auto border border-gray-200">
-                      <div className="grid lg:grid-cols-2 gap-0">
-                        {/* Image Section - Simplified */}
-                        <div className="relative bg-gray-100" style={{ minHeight: '400px' }}>
-                          <Image
-                            src={initiatives[activeInitiative]?.imageUrl || 
-                                 initiatives[activeInitiative]?.image?.url || 
-                                 initiatives[activeInitiative]?.bannerImage || 
-                                 getFallbackImage(initiatives[activeInitiative]?.category)}
-                            alt={initiatives[activeInitiative]?.name || 'Initiative'}
-                            width={600}
-                            height={400}
-                            className="w-full h-full object-cover"
-                            priority={true}
-                            onError={(e) => handleImageError(e, initiatives[activeInitiative]?.category)}
-                          />
-                          
-                          {/* Gradient Overlay - Always show */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                {/* Initiative Cards Grid - 3 Cards per Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 lg:mb-16">
+                  {initiatives.map((item, index) => {
+                    const isExpanded = expandedCards[item.id];
+                    const shouldTruncate = item.description && item.description.length > 100;
+                    const displayText = isExpanded || !shouldTruncate 
+                      ? item.description 
+                      : truncateText(item.description, 100);
 
-                          {/* Initiative Indicators */}
-                          <div className="absolute bottom-6 left-6 right-6 z-20">
-                            <div className="flex justify-between items-end">
-                              <div className="flex space-x-2">
-                                {initiatives.map((_, index) => (
-                                  <button
-                                    key={index}
-                                    onClick={() => setActiveInitiative(index)}
-                                    className={`transition-all duration-300 rounded-full ${
-                                      index === activeInitiative
-                                        ? 'w-8 h-2 bg-white'
-                                        : 'w-2 h-2 bg-white/60 hover:bg-white/80'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              <div className="text-white text-sm font-medium bg-black/50 rounded-full px-3 py-1 backdrop-blur-sm">
-                                {activeInitiative + 1} / {initiatives.length}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Content Section */}
-                        <div className="p-8 lg:p-12 flex flex-col justify-center">
-                          <div className="mb-8">
-                            <div className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold mb-6">
-                              Featured Initiative
-                            </div>
-                            <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                              {initiatives[activeInitiative]?.name}
-                            </h3>
-                            <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                              {initiatives[activeInitiative]?.description}
-                            </p>
-                          </div>
-
-                          {/* Impact Metric */}
-                          <div className="bg-green-50 border-l-4 border-green-500 p-6 mb-8">
-                            <div className="flex items-center">
-                              <svg className="w-8 h-8 text-green-600 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                              </svg>
-                              <div>
-                                <div className="text-2xl font-bold text-gray-900">
-                                  {initiatives[activeInitiative]?.impact}
-                                </div>
-                                <div className="text-green-700 font-medium">Impact Achieved</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <Link
-                            href={initiatives[activeInitiative]?.link || '#'}
-                            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-300 shadow-lg hover:shadow-xl"
-                          >
-                            Learn More About This Initiative
-                            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                            </svg>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* All Initiatives - Horizontal Card Layout */}
-                <div className="space-y-8 mb-16">
-                  {initiatives.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden"
-                    >
-                      <div className="grid md:grid-cols-3 gap-0">
+                    return (
+                      <div
+                        key={item.id}
+                        className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden flex flex-col"
+                      >
                         {/* Image Section */}
-                        <div className="relative bg-gray-100 md:h-64 h-48">
+                        <div className="relative bg-gray-100 h-48">
                           <Image
                             src={item.imageUrl || item.image?.url || item.bannerImage || item.icon || getFallbackImage(item.category)}
                             alt={`${item.name} initiative`}
-                            width={400}
-                            height={300}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                             onError={(e) => handleImageError(e, item.category)}
                           />
                           
                           {/* Category Badge */}
-                          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-md">
-                            {item.category?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Initiative'}
+                          {item.category && (
+                            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                              {item.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </div>
+                          )}
+
+                          {/* Impact Badge */}
+                          <div className="absolute bottom-3 right-3 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">
+                            {item.impact}
                           </div>
                         </div>
 
-                        {/* Content Section */}
-                        <div className="md:col-span-2 p-8 flex flex-col justify-between">
-                          <div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors duration-300">
+                        {/* Content Section - Fixed Height */}
+                        <div className="p-6 flex flex-col justify-between flex-1 min-h-[260px]">
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
                               {item.name}
                             </h3>
-                            <p className="text-gray-600 leading-relaxed mb-6">
-                              {item.description}
-                            </p>
+                            
+                            <div className="text-gray-600 leading-relaxed mb-4">
+                              <p className="text-sm">{displayText}</p>
+                              {shouldTruncate && (
+                                <button
+                                  onClick={() => toggleCardExpansion(item.id)}
+                                  className="text-blue-600 hover:text-blue-700 font-medium text-sm mt-2 transition-colors duration-200"
+                                >
+                                  {isExpanded ? 'Show less' : 'Read more'}
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            {/* Impact Badge */}
-                            <div className="inline-flex items-center bg-green-50 text-green-800 px-4 py-2 rounded-lg border border-green-200">
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                              </svg>
-                              <span className="font-semibold text-sm">{item.impact}</span>
-                            </div>
-
-                            {/* Action Button */}
+                          {/* Action Button */}
+                          <div className="mt-auto">
                             <Link
                               href={item.link || '#'}
-                              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300"
+                              className="inline-flex items-center w-full justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md hover:shadow-lg"
                             >
                               Learn More
                               <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,15 +411,15 @@ const defaultInitiatives = [
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* View All Button */}
                 <div className="text-center">
                   <Link
                     href="/initiatives"
-                    className="inline-flex items-center bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-lg font-bold text-lg transition-colors duration-300 shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center bg-gray-900 hover:bg-black text-white px-6 py-3 lg:px-8 lg:py-4 rounded-lg font-bold text-base lg:text-lg transition-colors duration-300 shadow-lg hover:shadow-xl"
                   >
                     Explore All Initiatives
                     <svg className="ml-3 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -492,23 +432,22 @@ const defaultInitiatives = [
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-20 bg-gray-100 border-b border-gray-200">
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-16">
-              <div className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+        {/* Features Section - Mobile Optimized */}
+        <section className="py-12 lg:py-20 bg-gray-100">
+          <div className="px-4 lg:px-6 max-w-7xl mx-auto">
+            <div className="text-center mb-8 lg:mb-16">
+              <div className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-4 lg:mb-6">
                 Why Choose Us
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-4 lg:mb-6">
                 Our Commitments
               </h2>
-              <p className="text-xl text-gray-800 max-w-3xl mx-auto leading-relaxed">
-                We believe in transparency, community engagement, and creating sustainable impact
-                through innovative approaches and dedicated service.
+              <p className="text-lg lg:text-xl text-gray-800 max-w-3xl mx-auto leading-relaxed px-4">
+                We believe in transparency, community engagement, and creating sustainable impact.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
               {features.map((feature, index) => {
                 const colorClasses = {
                   blue: { bg: 'bg-blue-500', text: 'text-blue-600', bgLight: 'bg-blue-50', border: 'border-blue-200' },
@@ -521,22 +460,18 @@ const defaultInitiatives = [
                 return (
                   <div
                     key={index}
-                    className={`group text-center bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-200 ${colors.bgLight}`}
+                    className="group text-center bg-white rounded-xl p-6 lg:p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-200"
                   >
-                    {/* Icon */}
-                    <div className={`w-20 h-20 mx-auto mb-6 rounded-xl ${colors.bg} flex items-center justify-center text-white text-3xl group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                    <div className={`w-16 h-16 lg:w-20 lg:h-20 mx-auto mb-4 lg:mb-6 rounded-xl ${colors.bg} flex items-center justify-center text-white text-2xl lg:text-3xl group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       {feature.icon}
                     </div>
 
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-gray-700 transition-colors duration-300">
+                    <h3 className="text-lg lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4 group-hover:text-gray-700 transition-colors duration-300">
                       {feature.title}
                     </h3>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-gray-700 leading-relaxed text-sm lg:text-base">
                       {feature.description}
                     </p>
-
-                    {/* Hover Border Effect */}
-                    <div className={`absolute inset-0 rounded-xl border-2 ${colors.border} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                   </div>
                 );
               })}
@@ -544,21 +479,24 @@ const defaultInitiatives = [
           </div>
         </section>
 
-        {/* Recent Events Section */}
-        <section className="py-20 bg-gray-50 border-b border-gray-200">
-          <div className="container mx-auto px-6">
-            <div className="flex items-center justify-between mb-16">
+        {/* Recent Events Section - Enhanced Design */}
+        <section className="py-12 lg:py-20 bg-gray-50">
+          <div className="px-4 lg:px-6 max-w-7xl mx-auto">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 lg:mb-16">
               <div>
                 <div className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
                   Latest Updates
                 </div>
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">
                   Recent Events
                 </h2>
+                <p className="text-lg text-gray-600 mt-4 max-w-2xl">
+                  Stay updated with our community activities and upcoming events that make a difference.
+                </p>
               </div>
               <Link
                 href="/events"
-                className="hidden md:inline-flex items-center text-blue-600 hover:text-blue-700 font-bold text-lg transition-colors duration-300"
+                className="hidden lg:inline-flex items-center text-blue-600 hover:text-blue-700 font-bold text-lg transition-colors duration-300 mt-4 lg:mt-0"
               >
                 View All Events
                 <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -568,70 +506,198 @@ const defaultInitiatives = [
             </div>
 
             {eventError && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-8 flex items-center justify-between">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 lg:px-6 lg:py-4 rounded-lg mb-6 lg:mb-8 flex items-center justify-between">
                 <div className="flex items-center">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                   </svg>
-                  <span>{eventError}</span>
+                  <span className="text-sm lg:text-base">{eventError}</span>
                 </div>
               </div>
             )}
+            
             {events.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 lg:gap-8 mb-8 lg:mb-12">
                 {events.map((event, index) => (
                   <div
                     key={event.id}
-                    className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 overflow-hidden"
+                    className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-200 overflow-hidden"
                   >
-                    <div className="p-8">
-                      {/* Date Badge */}
-                      <div className="inline-block bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold mb-6">
-                        <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        {event.startDate?.toLocaleDateString?.() || 'Date TBD'}
+                    {/* Event Image */}
+                    <div className="relative h-56 lg:h-64 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+                      <Image
+                        src={event.imageUrl || event.image?.url || event.bannerImage || ganesh}
+                        alt={`${event.name || 'Community Event'} event`}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500 rounded-t-2xl border-b-4 border-blue-200"
+                        priority={index === 0}
+                        loading={index === 0 ? undefined : "lazy"}
+                      />
+                      {/* Overlay for visual appeal */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+
+                      {/* Event Status Badge */}
+                      <div className="absolute top-4 left-4">
+                        {event.status === 'upcoming' && (
+                          <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            Upcoming
+                          </div>
+                        )}
+                        {event.status === 'ongoing' && (
+                          <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            Live Now
+                          </div>
+                        )}
+                        {event.status === 'completed' && (
+                          <div className="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            Completed
+                          </div>
+                        )}
                       </div>
 
-                      <h3 className="text-2xl font-bold text-gray-900 mb-4 hover:text-blue-700 transition-colors duration-300">
-                        {event.name}
+                      {/* Date Badge */}
+                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-900 px-3 py-2 rounded-lg shadow-lg">
+                        <div className="text-center">
+                          <div className="text-xs font-medium text-gray-600">
+                            {event.startDate ? event.startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : 'TBD'}
+                          </div>
+                          <div className="text-lg font-bold leading-none">
+                            {event.startDate ? event.startDate.getDate() : '?'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Event Content */}
+                    <div className="p-6 bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-b-2xl">
+                      {/* Event Title */}
+                      <h3 className="text-2xl font-extrabold text-blue-900 mb-2 group-hover:text-purple-700 transition-colors duration-300 line-clamp-2 drop-shadow-sm">
+                        {event.name || 'Community Event'}
                       </h3>
-                      <p className="text-gray-700 leading-relaxed mb-6">
-                        {event.description}
+
+                      {/* Event Description */}
+                      <p className="text-base lg:text-lg text-gray-700 mb-4 line-clamp-3 leading-relaxed">
+                        {event.description || 'Join us for this community event that brings people together for a meaningful cause.'}
                       </p>
 
-                      {/* Location if available */}
-                      {event.location && (
-                        <div className="flex items-center text-gray-500 text-sm font-medium">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                          </svg>
-                          {event.location}
-                        </div>
-                      )}
+                      {/* Event Details */}
+                      <div className="space-y-3 mb-6">
+                        {/* Date and Time */}
+                        {event.startDate && (
+                          <div className="flex items-center text-gray-500">
+                            <svg className="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <div>
+                              <span className="font-medium text-sm">
+                                {event.startDate.toLocaleDateString('en-US', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                              {event.startTime && (
+                                <span className="text-xs text-gray-400 ml-2">
+                                  at {event.startTime}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Location */}
+                        {event.location && (
+                          <div className="flex items-center text-gray-500">
+                            <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span className="font-medium text-sm truncate">{event.location}</span>
+                          </div>
+                        )}
+
+                        {/* Organizer */}
+                        {event.organizer && (
+                          <div className="flex items-center text-gray-500">
+                            <svg className="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            <span className="font-medium text-sm">Organized by {event.organizer}</span>
+                          </div>
+                        )}
+
+                        {/* Participants Count */}
+                        {event.participantsCount && (
+                          <div className="flex items-center text-gray-500">
+                            <svg className="w-4 h-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span className="font-medium text-sm">{event.participantsCount} participants</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="flex items-center justify-between">
+                        {event.registrationUrl || event.link ? (
+                          <Link
+                            href={event.registrationUrl || event.link}
+                            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md hover:shadow-lg"
+                          >
+                            {event.status === 'upcoming' ? 'Register Now' : 'Learn More'}
+                            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                            </svg>
+                          </Link>
+                        ) : (
+                          <div className="inline-flex items-center text-gray-400 text-sm">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            More details coming soon
+                          </div>
+                        )}
+
+                        {/* Event Category */}
+                        {event.category && (
+                          <div className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium">
+                            {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 mx-auto bg-gray-200 rounded-lg flex items-center justify-center mb-8">
-                  <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              <div className="text-center py-16 lg:py-20">
+                <div className="w-24 h-24 lg:w-32 lg:h-32 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg">
+                  <svg className="w-12 h-12 lg:w-16 lg:h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">No Recent Events</h3>
-                <p className="text-gray-700 max-w-md mx-auto">
-                  Stay tuned for upcoming community events and activities that make a difference.
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">No Recent Events</h3>
+                <p className="text-gray-600 max-w-md mx-auto text-base lg:text-lg px-4 mb-8">
+                  Stay tuned for upcoming community events and activities that make a difference. We&apos;re always planning something meaningful!
                 </p>
+                <Link
+                  href="/events"
+                  className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Browse All Events
+                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                  </svg>
+                </Link>
               </div>
             )}
 
-            <div className="text-center">
+            {/* View All Events Button - Mobile */}
+            <div className="text-center lg:hidden">
               <Link
                 href="/events"
-                className="inline-flex items-center bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-lg font-bold text-lg transition-colors duration-300 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center bg-gray-900 hover:bg-black text-white px-6 py-3 lg:px-8 lg:py-4 rounded-lg font-bold text-base lg:text-lg transition-colors duration-300 shadow-lg hover:shadow-xl"
               >
                 Explore All Events
                 <svg className="ml-3 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -642,54 +708,50 @@ const defaultInitiatives = [
           </div>
         </section>
 
-        {/* Gallery Preview */}
+        {/* Gallery Preview - Mobile Optimized */}
         {gallery.length > 0 && (
-          <section className="py-20 bg-white border-b border-gray-200">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-16">
-                <div className="inline-block bg-gradient-to-r from-purple-200 to-purple-400 text-purple-900 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow">
+          <section className="py-12 lg:py-20 bg-white">
+            <div className="px-4 lg:px-6 max-w-7xl mx-auto">
+              <div className="text-center mb-8 lg:mb-16">
+                <div className="inline-block bg-gradient-to-r from-purple-200 to-purple-400 text-purple-900 px-4 py-2 rounded-full text-sm font-semibold mb-4 lg:mb-6 shadow">
                   Visual Stories
                 </div>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-purple-900 mb-6 drop-shadow">
+                <h2 className="text-3xl lg:text-5xl font-extrabold text-purple-900 mb-4 lg:mb-6">
                   Moments That Matter
                 </h2>
-                <p className="text-xl text-gray-800 max-w-3xl mx-auto leading-relaxed">
-                  Capturing the joy, hope, and transformation in our community through powerful visual storytelling
+                <p className="text-lg lg:text-xl text-gray-800 max-w-3xl mx-auto leading-relaxed px-4">
+                  Capturing the joy, hope, and transformation in our community
                 </p>
               </div>
 
-              {/* Gallery Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-                {gallery.map((image, index) => (
+              {/* Gallery Grid - Mobile Responsive */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-8 lg:mb-16">
+                {gallery.slice(0, 8).map((image, index) => (
                   <div 
                     key={image.id} 
-                    className="group relative w-full overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                    style={{ aspectRatio: '1 / 1' }}
+                    className="group relative w-full overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 aspect-square"
                   >
-                    {/* Loading spinner */}
                     {galleryImageStates[index] && (
                       <div className="absolute inset-0 bg-gray-200 flex items-center justify-center z-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-purple-500"></div>
                       </div>
                     )}
 
-                    {/* Error fallback */}
                     {galleryImageErrors[index] ? (
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                         <div className="text-center text-white">
-                          <svg className="w-12 h-12 mx-auto mb-2 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                          <svg className="w-8 h-8 lg:w-12 lg:h-12 mx-auto mb-2 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path>
                           </svg>
-                          <p className="text-sm">Gallery Image</p>
+                          <p className="text-xs lg:text-sm">Gallery Image</p>
                         </div>
                       </div>
                     ) : (
                       <Image
                         src={image.url}
                         alt={image.caption || `Gallery image ${index + 1}`}
-                        width={300}
-                        height={300}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 25vw"
                         onLoad={() => handleGalleryImageLoad(index)}
                         onError={() => handleGalleryImageError(index)}
@@ -697,26 +759,15 @@ const defaultInitiatives = [
                       />
                     )}
 
-                    {/* Overlay - only show when image is loaded */}
                     {!galleryImageStates[index] && !galleryImageErrors[index] && (
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300"></div>
                     )}
                     
-                    {/* Caption */}
                     {image.caption && !galleryImageStates[index] && !galleryImageErrors[index] && (
-                      <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                        <p className="text-sm font-medium bg-black/70 rounded px-3 py-2">
+                      <div className="absolute bottom-2 left-2 right-2 lg:bottom-4 lg:left-4 lg:right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                        <p className="text-xs lg:text-sm font-medium bg-black/70 rounded px-2 py-1 lg:px-3 lg:py-2 line-clamp-2">
                           {image.caption}
                         </p>
-                      </div>
-                    )}
-
-                    {/* Zoom Icon */}
-                    {!galleryImageStates[index] && !galleryImageErrors[index] && (
-                      <div className="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
                       </div>
                     )}
                   </div>
@@ -726,100 +777,103 @@ const defaultInitiatives = [
               <div className="text-center">
                 <Link
                   href="/gallery"
-                  className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-lg font-bold text-lg transition-colors duration-300 shadow-xl hover:shadow-2xl"
+                  className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 lg:px-10 lg:py-4 rounded-lg font-bold text-base lg:text-lg transition-colors duration-300 shadow-xl hover:shadow-2xl"
                 >
-                  <svg className="mr-3 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  <svg className="mr-2 lg:mr-3 w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path>
                   </svg>
                   Explore Full Gallery
-                  <svg className="ml-3 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                  </svg>
                 </Link>
               </div>
             </div>
           </section>
         )}
 
-        <Testimonials customTestimonials={testimonials} variant="default" />
-
-        {/* CTA Section */}
-        <section className="bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 text-white relative overflow-hidden">
-          <div className="container mx-auto px-6 py-20 text-center relative z-10">
+        {/* CTA Section - Fixed Tag Closing Issues */}
+        <section className="bg-slate-900 text-white relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-purple-900/50"></div>
+          
+          <div className="relative z-10 px-4 lg:px-6 max-w-7xl mx-auto py-16 lg:py-24 text-center">
             <div className="max-w-4xl mx-auto">
-              <div className="inline-block bg-gradient-to-r from-green-400 to-blue-400 bg-opacity-30 text-white px-6 py-3 rounded-full text-lg font-semibold mb-8 shadow">
+              {/* Header Badge */}
+              <div className="inline-block bg-green-500 text-white px-6 py-3 rounded-full text-base lg:text-lg font-bold mb-8 shadow-xl">
                 Join Our Mission
               </div>
 
-              <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-8 drop-shadow">
-                Ready to Make a Real Difference?
+              {/* Main Heading */}
+              <h2 className="text-4xl lg:text-6xl xl:text-7xl font-black text-white mb-8 leading-tight">
+                Ready to Make a<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-400">
+                  Real Difference?
+                </span>
               </h2>
 
-              <p className="text-2xl text-blue-100 mb-12 max-w-3xl mx-auto leading-relaxed">
-                Your support can help us expand our reach and touch more lives. Get involved today
-                and be part of the change you want to see in the world.
+              {/* Subtitle */}
+              <p className="text-xl lg:text-2xl text-slate-200 mb-12 lg:mb-16 max-w-3xl mx-auto leading-relaxed font-medium">
+                Your support can help us expand our reach and touch more lives. Get involved today and be part of the change.
               </p>
 
-              {/* Impact Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 max-w-4xl mx-auto">
-                <div className="bg-gradient-to-br from-white/10 to-blue-200/10 rounded-lg p-8 border border-white border-opacity-20 shadow">
-                  <div className="text-4xl font-bold text-white mb-3">₹1 = 1 Meal</div>
-                  <div className="text-gray-300 font-medium">Your donation impact</div>
-                  <div className="w-full h-1 bg-green-400 rounded-full mt-4"></div>
+              {/* Impact Metrics - Redesigned Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16 max-w-5xl mx-auto">
+                <div className="bg-white rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300">
+                  <div className="text-4xl lg:text-5xl font-black text-slate-900 mb-4">₹1 = 1 Meal</div>
+                  <div className="text-slate-600 font-semibold text-lg">Your donation impact</div>
+                  <div className="w-full h-2 bg-green-500 rounded-full mt-6 shadow-lg"></div>
                 </div>
-                <div className="bg-gradient-to-br from-white/10 to-green-200/10 rounded-lg p-8 border border-white border-opacity-20 shadow">
-                  <div className="text-4xl font-bold text-white mb-3">100% Direct</div>
-                  <div className="text-gray-300 font-medium">No administrative fees</div>
-                  <div className="w-full h-1 bg-blue-400 rounded-full mt-4"></div>
+                <div className="bg-white rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300">
+                  <div className="text-4xl lg:text-5xl font-black text-slate-900 mb-4">100% Direct</div>
+                  <div className="text-slate-600 font-semibold text-lg">No administrative fees</div>
+                  <div className="w-full h-2 bg-blue-500 rounded-full mt-6 shadow-lg"></div>
                 </div>
-                <div className="bg-gradient-to-br from-white/10 to-purple-200/10 rounded-lg p-8 border border-white border-opacity-20 shadow">
-                  <div className="text-4xl font-bold text-white mb-3">24hr Impact</div>
-                  <div className="text-gray-300 font-medium">Immediate community help</div>
-                  <div className="w-full h-1 bg-purple-400 rounded-full mt-4"></div>
+                <div className="bg-white rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300">
+                  <div className="text-4xl lg:text-5xl font-black text-slate-900 mb-4">24hr Impact</div>
+                  <div className="text-slate-600 font-semibold text-lg">Immediate community help</div>
+                  <div className="w-full h-2 bg-purple-500 rounded-full mt-6 shadow-lg"></div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-8 justify-center mb-16">
+              {/* Action Buttons - Redesigned */}
+              <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16 lg:mb-20">
                 <Link
                   href="/donate"
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-12 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center justify-center text-xl"
+                  className="bg-green-500 hover:bg-green-600 text-white font-black py-5 px-10 lg:py-6 lg:px-14 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-green-500/25 inline-flex items-center justify-center text-xl lg:text-2xl"
                 >
-                  <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  <svg className="w-7 h-7 lg:w-8 lg:h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                   </svg>
                   Donate Now
                 </Link>
                 <Link
                   href="/volunteer"
-                  className="bg-white hover:bg-gray-100 text-gray-900 font-bold py-6 px-12 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center justify-center text-xl border-2 border-white"
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-black py-5 px-10 lg:py-6 lg:px-14 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-white/25 inline-flex items-center justify-center text-xl lg:text-2xl"
                 >
-                  <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                  <svg className="w-7 h-7 lg:w-8 lg:h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                   </svg>
                   Become a Volunteer
                 </Link>
               </div>
 
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap justify-center items-center gap-8 text-gray-300 font-medium">
-                <div className="flex items-center bg-white bg-opacity-10 rounded-full px-4 py-2">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+              {/* Trust Indicators - Redesigned */}
+              <div className="flex flex-wrap justify-center items-center gap-6 lg:gap-8">
+                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-xl">
+                  <svg className="w-5 h-5 mr-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                   </svg>
-                  Registered NGO
+                  <span className="text-base lg:text-lg text-white font-bold">Registered NGO</span>
                 </div>
-                <div className="flex items-center bg-white bg-opacity-10 rounded-full px-4 py-2">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-xl">
+                  <svg className="w-5 h-5 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  Transparent Operations
+                  <span className="text-base lg:text-lg text-white font-bold">Transparent Operations</span>
                 </div>
-                <div className="flex items-center bg-white bg-opacity-10 rounded-full px-4 py-2">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-xl">
+                  <svg className="w-5 h-5 mr-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                   </svg>
-                  Community Verified
+                  <span className="text-base lg:text-lg text-white font-bold">Community Verified</span>
                 </div>
               </div>
             </div>
@@ -828,25 +882,25 @@ const defaultInitiatives = [
 
         {/* Share Your Story Modal */}
         {showStoryModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-            <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-6 relative">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
+            <div className="bg-white rounded-lg shadow-2xl p-6 lg:p-8 max-w-2xl w-full relative max-h-[90vh] overflow-y-auto">
               <button
-                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-2xl"
+                className="absolute top-4 right-4 lg:top-6 lg:right-6 text-gray-400 hover:text-gray-600 text-2xl"
                 onClick={() => setShowStoryModal(false)}
               >
                 ×
               </button>
 
-              <div className="mb-8">
-                <h3 className="text-3xl font-bold text-gray-900 mb-4">
+              <div className="mb-6 lg:mb-8">
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
                   Share Your Story
                 </h3>
-                <p className="text-gray-600 text-lg">
+                <p className="text-gray-600 text-base lg:text-lg">
                   Your experience matters. Help inspire others by sharing how our community has impacted your life.
                 </p>
               </div>
 
-              <form onSubmit={handleStorySubmit} className="space-y-6">
+              <form onSubmit={handleStorySubmit} className="space-y-4 lg:space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-800 mb-2">Your Name</label>
                   <input

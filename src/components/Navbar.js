@@ -59,7 +59,8 @@ const Navbar = () => {
       items: [
         { href: '/initiatives', label: 'Initiatives' },
         { href: '/events', label: 'Events' },
-        { href: '/gallery', label: 'Photo Gallery' }
+        { href: '/gallery', label: 'Photo Gallery' },
+        { href: '/search-face', label: 'Find My Photo' }
       ]
     },
     {
@@ -181,10 +182,10 @@ const Navbar = () => {
                 {/* CTA Button */}
                 <Link 
                   href="/donate" 
-                  className="ml-4 bg-gradient-to-r from-teal-100 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-black px-6 py-2 rounded-full text-base font-semibold shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  className="ml-4 bg-gradient-to-r from-pink-500 via-red-500 to-yellow-400 hover:from-pink-600 hover:to-yellow-500 text-black px-6 py-2 rounded-full text-base font-extrabold shadow-xl border-2 border-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl"
                 >
                   <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="grey" stroke="grey" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                     </svg>
                     Donate Now
@@ -276,7 +277,7 @@ const Navbar = () => {
             {/* Mobile CTA Button */}
             <Link 
               href="/donate" 
-              className="w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white block px-3 py-3 rounded-md text-base font-semibold text-center mx-2 mt-4 transition-all duration-300 transform hover:scale-105 shadow-md"
+              className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white block px-3 py-3 rounded-md text-base font-semibold text-center mx-2 mt-4 transition-all duration-300 transform hover:scale-105 shadow-md"
             >
               <span className="flex items-center justify-center">
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

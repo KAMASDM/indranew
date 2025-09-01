@@ -1,22 +1,25 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { db } from "../../../lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import Navbar from "../../../components/Navbar";
-import Footer from "../../../components/Footer";
-import LoadingSpinner from "../../../components/LoadingSpinner";
-import Image from "next/image";
-import Link from "next/link";
+// Initiative Detail Page - Redesigned
+'use client';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { db } from '../../../lib/firebase';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import Navbar from '../../../components/Navbar';
+import Footer from '../../../components/Footer';
+import LoadingSpinner from '../../../components/LoadingSpinner';
+import Image from 'next/image';
+import Link from 'next/link';
 
 function InitiativeDetailPage() {
   const { slug } = useParams();
   const [initiative, setInitiative] = useState(null);
+  const [relatedInitiatives, setRelatedInitiatives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     const fetchInitiative = async () => {
@@ -24,24 +27,40 @@ function InitiativeDetailPage() {
       setError(null);
       try {
         // Try to fetch by slug field
-        const q = query(collection(db, "initiatives"), where("slug", "==", slug));
+        const q = query(collection(db, 'initiatives'), where('slug', '==', slug));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           const docSnap = snapshot.docs[0];
-          setInitiative({ id: docSnap.id, ...docSnap.data() });
+          const initiativeData = { id: docSnap.id, ...docSnap.data() };
+          setInitiative(initiativeData);
+          
+          // Fetch related initiatives
+          if (initiativeData.category) {
+            const relatedQuery = query(
+              collection(db, 'initiatives'), 
+              where('category', '==', initiativeData.category)
+            );
+            const relatedSnapshot = await getDocs(relatedQuery);
+            const related = relatedSnapshot.docs
+              .map(doc => ({ id: doc.id, ...doc.data() }))
+              .filter(item => item.id !== initiativeData.id)
+              .slice(0, 3);
+            setRelatedInitiatives(related);
+          }
         } else {
           // fallback: try by id
-          const docRef = doc(db, "initiatives", slug);
+          const docRef = doc(db, 'initiatives', slug);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setInitiative({ id: docSnap.id, ...docSnap.data() });
           } else {
-            setError("Initiative not found.");
+            setError('Initiative not found.');
             setInitiative(null);
           }
         }
       } catch (err) {
-        setError("Failed to load initiative.");
+        console.error('Error fetching initiative:', err);
+        setError('Failed to load initiative.');
         setInitiative(null);
       } finally {
         setLoading(false);
@@ -50,10 +69,7 @@ function InitiativeDetailPage() {
     if (slug) fetchInitiative();
   }, [slug]);
 
-  const handleImageLoad = () => {
-    setImageLoading(false);
-  };
-
+  const handleImageLoad = () => setImageLoading(false);
   const handleImageError = () => {
     setImageLoading(false);
     setImageError(true);
@@ -69,14 +85,59 @@ function InitiativeDetailPage() {
     document.body.style.overflow = 'auto';
   };
 
+  // Improved color scheme for better contrast
+  const getCategoryColors = (category) => {
+    const colorMap = {
+      'food-security': {
+        bg: 'bg-green-600',
+        text: 'text-green-900',
+        bgLight: 'bg-green-50',
+        button: 'bg-green-500 hover:bg-green-700 text-white',
+        buttonOutline: 'border-green-600 text-green-700 hover:bg-green-600 hover:text-white'
+      },
+      'education': {
+        bg: 'bg-blue-600',
+        text: 'text-blue-900',
+        bgLight: 'bg-blue-50',
+        button: 'bg-blue-500 hover:bg-blue-700 text-white',
+        buttonOutline: 'border-blue-600 text-blue-700 hover:bg-blue-600 hover:text-white'
+      },
+      'basic-needs': {
+        bg: 'bg-purple-600',
+        text: 'text-purple-900',
+        bgLight: 'bg-purple-50',
+        button: 'bg-purple-500 hover:bg-purple-700 text-white',
+        buttonOutline: 'border-purple-600 text-purple-700 hover:bg-purple-600 hover:text-white'
+      },
+      'environment': {
+        bg: 'bg-emerald-600',
+        text: 'text-emerald-900',
+        bgLight: 'bg-emerald-50',
+        button: 'bg-emerald-500 hover:bg-emerald-700 text-white',
+        buttonOutline: 'border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white'
+      },
+      'default': {
+        bg: 'bg-gray-600',
+        text: 'text-gray-900',
+        bgLight: 'bg-gray-50',
+        button: 'bg-gray-500 hover:bg-gray-700 text-white',
+        buttonOutline: 'border-gray-600 text-gray-700 hover:bg-gray-600 hover:text-white'
+      }
+    };
+    return colorMap[category] || colorMap.default;
+  };
+
   if (loading) {
     return (
-      <div className="bg-white min-h-screen flex flex-col">
+      <div className="bg-gray-50 min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
-            <LoadingSpinner size="xl" />
-            <p className="mt-4 text-gray-600 font-medium">Loading initiative details...</p>
+            <div className="inline-flex items-center space-x-4 bg-white rounded-2xl shadow-xl px-8 py-6 mb-8">
+              <LoadingSpinner size="lg" />
+              <span className="text-gray-700 font-semibold text-lg">Loading initiative details...</span>
+            </div>
+            <p className="text-gray-500">Gathering program information</p>
           </div>
         </main>
         <Footer />
@@ -86,12 +147,12 @@ function InitiativeDetailPage() {
 
   if (error || !initiative) {
     return (
-      <div className="bg-white min-h-screen flex flex-col">
+      <div className="bg-gray-50 min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto">
-            <div className="w-24 h-24 mx-auto bg-gray-200 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <main className="flex-1 flex items-center justify-center py-20">
+          <div className="text-center max-w-md mx-auto px-6">
+            <div className="w-32 h-32 mx-auto bg-red-100 rounded-3xl flex items-center justify-center mb-8">
+              <svg className="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
               </svg>
             </div>
@@ -99,7 +160,7 @@ function InitiativeDetailPage() {
             <p className="text-gray-600 mb-8">The initiative you&apos;re looking for doesn&apos;t exist or may have been removed.</p>
             <Link 
               href="/initiatives" 
-              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-300"
+              className="inline-flex items-center bg-teal-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-300 shadow-lg"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -114,74 +175,91 @@ function InitiativeDetailPage() {
   }
 
   const mainImage = initiative.imageUrl || initiative.image?.url || initiative.bannerImage;
-  const categoryColors = {
-    'food-security': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' },
-    'education': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
-    'basic-needs': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' },
-    'environment': { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
-    'default': { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' }
-  };
-  
-  const colors = categoryColors[initiative.category] || categoryColors.default;
+  const colors = getCategoryColors(initiative.category);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📋' },
+    { id: 'impact', label: 'Impact', icon: '📊' },
+    { id: 'gallery', label: 'Gallery', icon: '🖼️' },
+    { id: 'get-involved', label: 'Get Involved', icon: '🤝' }
+  ];
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <Navbar />
-      
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
+      <section className="relative bg-gradient-to-br from-gray-100 via-cyan-100 to-blue-100 text-gray-900 overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
         <div className="container mx-auto px-6 py-20 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className={`inline-block px-4 py-2 rounded-full text-sm font-semibold mb-6 ${colors.bg} ${colors.text} ${colors.border} border`}>
-              {initiative.category ? initiative.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Initiative'}
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              {initiative.title || initiative.name}
-            </h1>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
-              {initiative.description}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <main className="container mx-auto px-6 py-16">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-3 gap-12">
-            
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-12">
-              
-              {/* Main Image */}
-              {mainImage && (
-                <div className="relative bg-white rounded-2xl shadow-lg overflow-hidden">
-                  <div className="relative" style={{ aspectRatio: '16 / 9' }}>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Content */}
+              <div>
+                <div className="flex items-center space-x-4 mb-6">
+                  <span className={`px-4 py-2 rounded-full text-sm font-bold ${colors.bg} text-white shadow-lg`}>
+                    {initiative.category ? initiative.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Initiative'}
+                  </span>
+                  {initiative.featured && (
+                    <span className="px-4 py-2 bg-yellow-400 text-yellow-900 rounded-full text-sm font-bold shadow-lg">
+                      Featured Program
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight {colors.text}">
+                  {initiative.title || initiative.name}
+                </h1>
+                <p className="text-xl mb-8 leading-relaxed {colors.text}">
+                  {initiative.description}
+                </p>
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-white/80 rounded-2xl p-4">
+                    <div className="text-2xl font-bold text-gray-900">Active</div>
+                    <div className="text-teal-700 text-sm">Status</div>
+                  </div>
+                  {initiative.impact && (
+                    <div className="bg-white/80 rounded-2xl p-4">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {typeof initiative.impact === 'string' 
+                          ? initiative.impact.split(' ')[0]
+                          : initiative.impact.number}
+                      </div>
+                      <div className="text-teal-700 text-sm">
+                        {typeof initiative.impact === 'string' 
+                          ? initiative.impact.split(' ').slice(1).join(' ')
+                          : initiative.impact.metric}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Image */}
+              <div className="relative">
+                <div className="relative bg-white/80 rounded-3xl p-4">
+                  <div className="relative rounded-2xl overflow-hidden aspect-video">
                     {imageLoading && (
                       <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
                       </div>
                     )}
-                    
                     {imageError ? (
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                      <div className={`absolute inset-0 ${colors.bg} flex items-center justify-center`}>
                         <div className="text-center text-white">
                           <div className="text-6xl mb-4">
                             {initiative.category === 'food-security' ? '🍽️' : 
                              initiative.category === 'education' ? '📚' : 
-                             initiative.category === 'basic-needs' ? '🛡️' : '🌱'}
+                             initiative.category === 'basic-needs' ? '🏠' : '🌱'}
                           </div>
-                          <p className="text-xl font-semibold">{initiative.title || initiative.name}</p>
-                          <p className="text-blue-200">Initiative Image</p>
+                          <p className="text-xl font-bold">{initiative.title || initiative.name}</p>
                         </div>
                       </div>
                     ) : (
                       <Image
                         src={mainImage}
                         alt={initiative.title || initiative.name}
-                        width={800}
-                        height={450}
-                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                        fill
+                        className="object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
                         onLoad={handleImageLoad}
                         onError={handleImageError}
                         onClick={() => openLightbox(mainImage)}
@@ -189,76 +267,215 @@ function InitiativeDetailPage() {
                       />
                     )}
                   </div>
-                  {!imageLoading && !imageError && (
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100 cursor-pointer">
-                      <div className="bg-white/90 rounded-full p-3">
-                        <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main className="container mx-auto px-6 py-16">
+        <div className="max-w-6xl mx-auto">
+          
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-2xl shadow-lg p-2 mb-12 overflow-x-auto">
+            <div className="flex space-x-2 min-w-max">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? `${colors.button}`
+                      : `${colors.buttonOutline} bg-white`
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-12">
+            
+            {/* Main Content */}
+            <div className="lg:col-span-2">
+              
+              {activeTab === 'overview' && (
+                <div className="space-y-8">
+                  {/* Detailed Description */}
+                  <div className="bg-white rounded-3xl shadow-lg p-8">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-6">About This Initiative</h2>
+                    <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
+                      {initiative.longDescription ? (
+                        <div dangerouslySetInnerHTML={{ __html: initiative.longDescription }} />
+                      ) : (
+                        <p className="text-lg leading-relaxed">{initiative.description}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Key Features */}
+                  {initiative.features && initiative.features.length > 0 && (
+                    <div className="bg-white rounded-3xl shadow-lg p-8">
+                      <h2 className="text-3xl font-bold text-gray-900 mb-6">Key Features</h2>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {initiative.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-start space-x-4 p-4 bg-green-50 rounded-2xl border border-green-200">
+                            <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                              </svg>
+                            </div>
+                            <p className="text-gray-800 font-semibold">{feature}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Detailed Description */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">About This Initiative</h2>
-                <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
-                  {initiative.longDescription ? (
-                    <div dangerouslySetInnerHTML={{ __html: initiative.longDescription }} />
-                  ) : (
-                    <p>{initiative.description}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Key Features */}
-              {initiative.features && initiative.features.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Key Features</h2>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {initiative.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                          </svg>
-                        </div>
-                        <p className="text-gray-700 font-medium">{feature}</p>
+              {activeTab === 'impact' && (
+                <div className="bg-white rounded-3xl shadow-lg p-8">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-8">Impact Metrics</h2>
+                  
+                  {initiative.impact ? (
+                    <div className="text-center mb-8">
+                      <div className="text-6xl font-black text-teal-600 mb-4">
+                        {typeof initiative.impact === 'string' 
+                          ? initiative.impact 
+                          : `${initiative.impact.number}`}
                       </div>
-                    ))}
+                      {typeof initiative.impact === 'object' && (
+                        <>
+                          <div className="text-2xl font-bold text-gray-800 mb-2">{initiative.impact.metric}</div>
+                          {initiative.impact.description && (
+                            <p className="text-gray-600">{initiative.impact.description}</p>
+                          )}
+                        </>
+                      )}
+                      <div className="mt-6 bg-teal-100 rounded-full h-4 max-w-md mx-auto">
+                        <div className="bg-teal-600 h-4 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">📊</div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Impact Data Coming Soon</h3>
+                      <p className="text-gray-600">We&apos;re working on compiling detailed impact metrics for this initiative.</p>
+                    </div>
+                  )}
+
+                  {/* Additional Impact Stats */}
+                  <div className="grid md:grid-cols-3 gap-6 mt-8">
+                    <div className="bg-blue-50 rounded-2xl p-6 text-center border border-blue-200">
+                      <div className="text-3xl font-bold text-blue-600">Active</div>
+                      <div className="text-blue-800 font-semibold">Program Status</div>
+                    </div>
+                    <div className="bg-green-50 rounded-2xl p-6 text-center border border-green-200">
+                      <div className="text-3xl font-bold text-green-600">Community</div>
+                      <div className="text-green-800 font-semibold">Driven Initiative</div>
+                    </div>
+                    <div className="bg-purple-50 rounded-2xl p-6 text-center border border-purple-200">
+                      <div className="text-3xl font-bold text-purple-600">Vadodara</div>
+                      <div className="text-purple-800 font-semibold">Based Program</div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Gallery */}
-              {initiative.gallery && initiative.gallery.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Gallery</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {initiative.gallery.map((image, idx) => (
-                      <div 
-                        key={idx}
-                        className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer group"
-                        onClick={() => openLightbox(image.url)}
-                      >
-                        <Image
-                          src={image.url}
-                          alt={image.caption || `Gallery image ${idx + 1}`}
-                          width={300}
-                          height={300}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 bg-white rounded-full p-2">
-                            <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
+              {activeTab === 'gallery' && (
+                <div className="bg-white rounded-3xl shadow-lg p-8">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Photo Gallery</h2>
+                  
+                  {initiative.gallery && initiative.gallery.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {initiative.gallery.map((image, idx) => (
+                        <div 
+                          key={idx}
+                          className="relative aspect-square bg-gray-100 rounded-2xl overflow-hidden cursor-pointer group"
+                          onClick={() => openLightbox(image.url)}
+                        >
+                          <Image
+                            src={image.url}
+                            alt={image.caption || `Gallery image ${idx + 1}`}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 bg-white rounded-full p-3 shadow-lg">
+                              <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                              </svg>
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16">
+                      <div className="text-6xl mb-4">🖼️</div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">No Gallery Images</h3>
+                      <p className="text-gray-600">Gallery images for this initiative will be added soon.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'get-involved' && (
+                <div className="bg-white rounded-3xl shadow-lg p-8">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Get Involved</h2>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-6 border border-teal-200">
+                      <h3 className="text-xl font-bold text-teal-800 mb-4">Support This Initiative</h3>
+                      <p className="text-teal-700 mb-6">
+                        Your donation directly supports this program and helps us expand our impact in the community.
+                      </p>
+                      <Link 
+                        href="/donate" 
+                        className={`inline-flex items-center ${colors.button} px-6 py-3 rounded-xl font-bold transition-colors duration-300 shadow-lg`}
+                      >
+                        <span className="mr-2">❤️</span>
+                        Donate Now
+                      </Link>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+                      <h3 className="text-xl font-bold text-blue-800 mb-4">Volunteer With Us</h3>
+                      <p className="text-blue-700 mb-6">
+                        Join our team of dedicated volunteers and contribute your time and skills to make a difference.
+                      </p>
+                      <Link 
+                        href="/volunteer" 
+                        className={`inline-flex items-center ${colors.buttonOutline} px-6 py-3 rounded-xl font-bold transition-colors duration-300 shadow-lg`}
+                      >
+                        <span className="mr-2">🤝</span>
+                        Become a Volunteer
+                      </Link>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+                      <h3 className="text-xl font-bold text-green-800 mb-4">Spread the Word</h3>
+                      <p className="text-green-700 mb-6">
+                        Help us reach more people by sharing this initiative with your network.
+                      </p>
+                      <div className="flex gap-4">
+                        <button className="flex items-center bg-gray-700 hover:bg-gray-900 text-white px-4 py-2 rounded-xl font-semibold transition-colors duration-300">
+                          <span className="mr-2">📱</span>
+                          Share
+                        </button>
+                        <button 
+                          onClick={() => navigator.clipboard.writeText(window.location.href)}
+                          className="flex items-center border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white px-4 py-2 rounded-xl font-semibold transition-colors duration-300"
+                        >
+                          <span className="mr-2">🔗</span>
+                          Copy Link
+                        </button>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -267,98 +484,81 @@ function InitiativeDetailPage() {
             {/* Sidebar */}
             <div className="space-y-8">
               
-              {/* Impact Stats */}
-              {initiative.impact && (
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Impact Achieved</h3>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {typeof initiative.impact === 'string' ? initiative.impact : `${initiative.impact.number} ${initiative.impact.metric}`}
-                    </div>
-                    <div className="text-gray-600 font-medium">
-                      {typeof initiative.impact === 'object' && initiative.impact.description}
-                    </div>
-                    <div className="mt-4 bg-blue-50 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{width: '75%'}}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Stats */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
+              {/* Quick Info */}
+              <div className="bg-white rounded-3xl shadow-lg p-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Quick Info</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3m-3 0H0m4 20V5a2 2 0 012-2h6a2 2 0 012 2v15"></path>
                       </svg>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Category</div>
-                      <div className="font-semibold text-gray-900">
+                      <div className="text-sm text-gray-500 font-semibold">Category</div>
+                      <div className="font-bold text-gray-900">
                         {initiative.category ? initiative.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Community Initiative'}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                       </svg>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Location</div>
-                      <div className="font-semibold text-gray-900">Vadodara, Gujarat</div>
+                      <div className="text-sm text-gray-500 font-semibold">Location</div>
+                      <div className="font-bold text-gray-900">Vadodara, Gujarat</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                       </svg>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Status</div>
-                      <div className="font-semibold text-green-600">Active</div>
+                      <div className="text-sm text-gray-500 font-semibold">Status</div>
+                      <div className="font-bold text-green-600">Active Program</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Call to Action */}
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-6">
-                <h3 className="text-2xl font-bold mb-4">Get Involved</h3>
-                <p className="text-blue-100 mb-6">
-                  Support this initiative and help us make a bigger impact in our community.
-                </p>
-                <div className="space-y-3">
-                  <Link 
-                    href="/donate" 
-                    className="w-full bg-white hover:bg-gray-100 text-blue-600 px-6 py-3 rounded-lg font-semibold transition-colors duration-300 text-center block"
-                  >
-                    Donate Now
-                  </Link>
-                  <Link 
-                    href="/volunteer" 
-                    className="w-full border-2 border-white/50 text-white hover:bg-white/10 px-6 py-3 rounded-lg font-semibold transition-colors duration-300 text-center block"
-                  >
-                    Become a Volunteer
-                  </Link>
+              {/* Related Initiatives */}
+              {relatedInitiatives.length > 0 && (
+                <div className="bg-white rounded-3xl shadow-lg p-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Related Initiatives</h3>
+                  <div className="space-y-4">
+                    {relatedInitiatives.map((related) => (
+                      <Link
+                        key={related.id}
+                        href={`/initiatives/${related.slug || related.id}`}
+                        className="block p-4 rounded-2xl border border-gray-200 hover:border-teal-300 hover:bg-teal-50 transition-all duration-200 group"
+                      >
+                        <h4 className="font-bold text-gray-900 group-hover:text-teal-700 mb-2">
+                          {related.title || related.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {related.description}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Back Link */}
               <div className="text-center">
                 <Link 
                   href="/initiatives" 
-                  className="inline-flex items-center text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300"
+                  className="inline-flex items-center text-gray-600 hover:text-teal-600 font-semibold transition-colors duration-300 group"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                   </svg>
                   Back to All Initiatives
@@ -372,23 +572,23 @@ function InitiativeDetailPage() {
       {/* Lightbox Modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={closeLightbox}
         >
-          <div className="relative max-w-4xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-6xl max-h-[90vh] p-4" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeLightbox}
-              className="absolute top-0 right-0 m-4 text-white text-4xl hover:text-gray-300 transition-colors z-10"
+              className="absolute top-2 right-2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-2xl rounded-full flex items-center justify-center transition-all duration-200 z-10"
               aria-label="Close image view"
             >
-              &times;
+              ×
             </button>
             <Image
               src={selectedImage}
               alt="Initiative image"
               width={1200}
               height={800}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
             />
           </div>
         </div>
