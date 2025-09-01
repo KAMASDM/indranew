@@ -12,7 +12,6 @@ const loadModels = async () => {
   const MODEL_URL = '/models'; // Models must be in the /public/models directory
   try {
     await Promise.all([
-      // **CHANGE**: Added TinyFaceDetector model for better accuracy
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
@@ -33,6 +32,7 @@ const SearchYourImagePage = () => {
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [searchProgress, setSearchProgress] = useState({ current: 0, total: 0, status: '' });
   const imageInputRef = useRef(null);
 
   useEffect(() => {
@@ -50,7 +50,6 @@ const SearchYourImagePage = () => {
     }
   };
   
-  // Function to fetch all image URLs from Firestore
   const fetchAllImageUrls = async () => {
     const urls = new Set();
     const collectionsToSearch = ['gallery', 'events'];
@@ -86,12 +85,14 @@ const SearchYourImagePage = () => {
     setSearchAttempted(true);
     setError('');
     setResults([]);
+    setSearchProgress({ current: 0, total: 0, status: 'Initializing search...' });
+
+    let allImages = [];
 
     try {
-      // **CHANGE**: Using TinyFaceDetector options for better accuracy
-      const detectorOptions = new faceapi.TinyFaceDetectorOptions();
+      const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
       
-      // 1. Detect face in user's uploaded image
+      setSearchProgress(prev => ({ ...prev, status: 'Analyzing your photo...' }));
       const userImgElement = await faceapi.bufferToImage(userImage);
       const userDetections = await faceapi.detectSingleFace(userImgElement, detectorOptions).withFaceLandmarks().withFaceDescriptor();
 
@@ -101,32 +102,40 @@ const SearchYourImagePage = () => {
         return;
       }
       
-      const faceMatcher = new faceapi.FaceMatcher([userDetections.descriptor]);
+      const faceMatcher = new faceapi.FaceMatcher([userDetections.descriptor], 0.54);
       
-      // 2. Fetch all image URLs from Firestore
-      const allImages = await fetchAllImageUrls();
+      setSearchProgress(prev => ({ ...prev, status: 'Fetching all event and gallery photos...' }));
+      allImages = await fetchAllImageUrls();
+      if (allImages.length === 0) {
+          setError("No images found in the gallery or events to search through.");
+          setIsSearching(false);
+          return;
+      }
+      setSearchProgress({ current: 0, total: allImages.length, status: `Found ${allImages.length} photos to search.` });
 
-      // 3. Search for matches
-      const foundMatches = new Set(); // Use a Set to avoid duplicate image results
-      for (const imageData of allImages) {
-        try {
-          const searchImg = await faceapi.fetchImage(imageData.url);
-          const searchDetections = await faceapi.detectAllFaces(searchImg, detectorOptions).withFaceLandmarks().withFaceDescriptor();
-          
-          console.log(`Found ${searchDetections.length} faces in ${imageData.url}`); // Debugging log
-
-          searchDetections.forEach(detection => {
-            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-            console.log(`Comparing face... Best match distance: ${bestMatch.distance}`); // Debugging log
+      const foundMatches = new Set();
+      
+      const batchSize = 5;
+      for (let i = 0; i < allImages.length; i += batchSize) {
+        const batch = allImages.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (imageData, index) => {
+          const currentIndex = i + index + 1;
+          setSearchProgress({ current: currentIndex, total: allImages.length, status: `Searching image ${currentIndex} of ${allImages.length}...` });
+          try {
+            const searchImg = await faceapi.fetchImage(imageData.url);
+            // **FIX**: Changed to withFaceDescriptors (plural) for detecting multiple faces
+            const searchDetections = await faceapi.detectAllFaces(searchImg, detectorOptions).withFaceLandmarks().withFaceDescriptors();
             
-            // **CHANGE**: Adjusted threshold for the new detector
-            if (bestMatch.distance < 0.54) { 
-              foundMatches.add(imageData.url);
-            }
-          });
-        } catch (imgError) {
-          console.warn(`Could not process image ${imageData.url}.`, imgError);
-        }
+            searchDetections.forEach(detection => {
+              const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+              if (bestMatch.label !== 'unknown') { 
+                foundMatches.add(imageData.url);
+              }
+            });
+          } catch (imgError) {
+            console.warn(`Could not process image ${imageData.url}.`, imgError);
+          }
+        }));
       }
       
       const uniqueResults = Array.from(foundMatches).map(url => allImages.find(img => img.url === url)).filter(Boolean);
@@ -137,6 +146,7 @@ const SearchYourImagePage = () => {
       setError("An unexpected error occurred during the search. Please try again.");
     } finally {
       setIsSearching(false);
+      setSearchProgress({ current: allImages.length, total: allImages.length, status: 'Search complete!' });
     }
   };
 
@@ -144,7 +154,7 @@ const SearchYourImagePage = () => {
     <div className="bg-gray-50 min-h-screen">
       <div className="pt-20">
         <header className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white text-center py-20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-black opacity-30"></div>
+          <div className="absolute inset-0  opacity-30"></div>
           <div className="relative z-10">
             <h1 className="text-5xl font-bold mb-4">Find Your Photo</h1>
             <p className="text-xl mb-6">Upload your photo to find pictures of yourself from our events and gallery!</p>
@@ -216,13 +226,16 @@ const SearchYourImagePage = () => {
             {error && <div className="mt-6 text-center text-red-600 bg-red-50 p-4 rounded-lg">{error}</div>}
           </div>
 
-          {/* Results Section */}
-          {(isSearching || searchAttempted) && (
+          {/* Results Section with Progress */}
+          {searchAttempted && (
             <div className="mt-16">
               <h2 className="text-3xl font-bold text-center mb-8">Search Results</h2>
               {isSearching ? (
-                <div className="text-center">
-                  <LoadingSpinner size="xl" text="Analyzing photos... This might take a moment."/>
+                <div className="text-center bg-white p-8 rounded-lg shadow-md">
+                  <LoadingSpinner size="xl" text={searchProgress.status}/>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+                    <div className="bg-teal-600 h-2.5 rounded-full" style={{ width: `${searchProgress.total > 0 ? (searchProgress.current / searchProgress.total) * 100 : 0}%` }}></div>
+                  </div>
                 </div>
               ) : results.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -230,7 +243,7 @@ const SearchYourImagePage = () => {
                     <Link href={result.link} key={index} className="group block">
                       <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg transform group-hover:scale-105 transition-transform">
                         <Image src={result.url} alt={`Match found ${index + 1}`} fill className="object-cover" />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
+                        <div className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
                             <span className="text-white opacity-0 group-hover:opacity-100 font-bold">View Source</span>
                         </div>
                       </div>
@@ -240,7 +253,7 @@ const SearchYourImagePage = () => {
               ) : (
                 <div className="text-center py-12 bg-white rounded-lg shadow-md">
                     <p className="text-2xl font-bold text-gray-800">No Matches Found</p>
-                    <p className="text-gray-500 mt-2">We couldn&apos;t find any photos with a matching face.</p>
+                    <p className="text-gray-500 mt-2">We couldn't find any photos with a matching face.</p>
                 </div>
               )}
             </div>
