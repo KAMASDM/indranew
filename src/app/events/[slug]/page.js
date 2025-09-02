@@ -171,7 +171,7 @@ const EventDetailPage = () => {
   const descriptionParagraphs = event.description ? event.description.split('\n').filter(p => p.trim() !== '') : [];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-cyan-50 min-h-screen">
       <Navbar />
       <main className="pt-20">
         {/* Hero Section */}

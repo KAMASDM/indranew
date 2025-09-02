@@ -130,7 +130,7 @@ const Footer = () => {
         </svg>
       ),
       label: 'Address',
-      value: 'Vadodara, Gujarat, India',
+      value: 'Indraprasth Complex, Ellorapark,Vadodara, Gujarat, India',
       link: 'https://maps.google.com/?q=Vadodara,Gujarat,India'
     },
     {
@@ -173,7 +173,7 @@ const Footer = () => {
             <Link href="/" className="flex items-center space-x-3 mb-6 group">
               <div className="relative">
                 <Image 
-                  src="/logo.png" 
+                  src="/indra.png" 
                   alt="Indraprasth Foundation Logo" 
                   width={60} 
                   height={60} 

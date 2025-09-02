@@ -1,4 +1,4 @@
-// Initiative Detail Page - Redesigned
+// Initiative Detail Page - Fully Integrated with Admin Fields
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -16,10 +16,9 @@ function InitiativeDetailPage() {
   const [relatedInitiatives, setRelatedInitiatives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchInitiative = async () => {
@@ -69,10 +68,25 @@ function InitiativeDetailPage() {
     if (slug) fetchInitiative();
   }, [slug]);
 
-  const handleImageLoad = () => setImageLoading(false);
-  const handleImageError = () => {
-    setImageLoading(false);
-    setImageError(true);
+  // Handle multiple main images
+  const getMainImages = () => {
+    if (!initiative) return [];
+    
+    // Handle array of images
+    if (Array.isArray(initiative.imageUrl)) {
+      return initiative.imageUrl.filter(Boolean);
+    }
+    
+    // Handle single image (string)
+    if (typeof initiative.imageUrl === 'string' && initiative.imageUrl) {
+      return [initiative.imageUrl];
+    }
+    
+    // Handle legacy fields
+    if (initiative.image?.url) return [initiative.image.url];
+    if (initiative.bannerImage) return [initiative.bannerImage];
+    
+    return [];
   };
 
   const openLightbox = (imageUrl) => {
@@ -174,7 +188,7 @@ function InitiativeDetailPage() {
     );
   }
 
-  const mainImage = initiative.imageUrl || initiative.image?.url || initiative.bannerImage;
+  const mainImages = getMainImages();
   const colors = getCategoryColors(initiative.category);
 
   const tabs = [
@@ -184,10 +198,10 @@ function InitiativeDetailPage() {
     { id: 'get-involved', label: 'Get Involved', icon: '🤝' }
   ];
 
-
   return (
     <div className="bg-gray-50 min-h-screen">
       <Navbar />
+      
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-100 via-cyan-100 to-blue-100 text-gray-900 overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -196,7 +210,7 @@ function InitiativeDetailPage() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Content */}
               <div>
-                <div className="flex items-center space-x-4 mb-6">
+                <div className="flex flex-wrap items-center gap-4 mb-6">
                   <span className={`px-4 py-2 rounded-full text-sm font-bold ${colors.bg} text-white shadow-lg`}>
                     {initiative.category ? initiative.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Initiative'}
                   </span>
@@ -206,13 +220,14 @@ function InitiativeDetailPage() {
                     </span>
                   )}
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight {colors.text}">
+                <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight text-gray-900">
                   {initiative.title || initiative.name}
                 </h1>
-                <p className="text-xl mb-8 leading-relaxed {colors.text}">
+                <p className="text-xl mb-8 leading-relaxed text-gray-800">
                   {initiative.description}
                 </p>
-                {/* Quick Stats */}
+                
+                {/* Enhanced Quick Stats */}
                 <div className="grid grid-cols-2 gap-6">
                   <div className="bg-white/80 rounded-2xl p-4">
                     <div className="text-2xl font-bold text-gray-900">Active</div>
@@ -221,52 +236,78 @@ function InitiativeDetailPage() {
                   {initiative.impact && (
                     <div className="bg-white/80 rounded-2xl p-4">
                       <div className="text-2xl font-bold text-gray-900">
-                        {typeof initiative.impact === 'string' 
-                          ? initiative.impact.split(' ')[0]
-                          : initiative.impact.number}
+                        {typeof initiative.impact === 'object' && initiative.impact.number 
+                          ? initiative.impact.number 
+                          : typeof initiative.impact === 'string' 
+                            ? initiative.impact.split(' ')[0]
+                            : 'Growing'}
                       </div>
                       <div className="text-teal-700 text-sm">
-                        {typeof initiative.impact === 'string' 
-                          ? initiative.impact.split(' ').slice(1).join(' ')
-                          : initiative.impact.metric}
+                        {typeof initiative.impact === 'object' && initiative.impact.metric 
+                          ? initiative.impact.metric
+                          : typeof initiative.impact === 'string' 
+                            ? initiative.impact.split(' ').slice(1).join(' ')
+                            : 'Impact'}
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-              {/* Image */}
+              
+              {/* Enhanced Image Section - Handle Multiple Images */}
               <div className="relative">
                 <div className="relative bg-white/80 rounded-3xl p-4">
-                  <div className="relative rounded-2xl overflow-hidden aspect-video">
-                    {imageLoading && (
-                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                  {mainImages.length > 0 ? (
+                    <div className="relative">
+                      {/* Main Image Display */}
+                      <div className="relative rounded-2xl overflow-hidden aspect-video">
+                        <Image
+                          src={mainImages[currentMainImageIndex]}
+                          alt={initiative.title || initiative.name}
+                          fill
+                          className="object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                          onClick={() => openLightbox(mainImages[currentMainImageIndex])}
+                          priority
+                        />
                       </div>
-                    )}
-                    {imageError ? (
-                      <div className={`absolute inset-0 ${colors.bg} flex items-center justify-center`}>
-                        <div className="text-center text-white">
-                          <div className="text-6xl mb-4">
-                            {initiative.category === 'food-security' ? '🍽️' : 
-                             initiative.category === 'education' ? '📚' : 
-                             initiative.category === 'basic-needs' ? '🏠' : '🌱'}
-                          </div>
-                          <p className="text-xl font-bold">{initiative.title || initiative.name}</p>
+                      
+                      {/* Image Navigation for Multiple Images */}
+                      {mainImages.length > 1 && (
+                        <div className="flex justify-center space-x-2 mt-4">
+                          {mainImages.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentMainImageIndex(index)}
+                              className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                                index === currentMainImageIndex 
+                                  ? 'bg-teal-600' 
+                                  : 'bg-gray-300 hover:bg-gray-400'
+                              }`}
+                            />
+                          ))}
                         </div>
+                      )}
+                      
+                      {/* Image Counter */}
+                      {mainImages.length > 1 && (
+                        <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                          {currentMainImageIndex + 1} of {mainImages.length}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Fallback when no images
+                    <div className={`rounded-2xl overflow-hidden aspect-video ${colors.bg} flex items-center justify-center`}>
+                      <div className="text-center text-white">
+                        <div className="text-6xl mb-4">
+                          {initiative.category === 'food-security' ? '🍽️' : 
+                           initiative.category === 'education' ? '📚' : 
+                           initiative.category === 'basic-needs' ? '🏠' : '🌱'}
+                        </div>
+                        <p className="text-xl font-bold">{initiative.title || initiative.name}</p>
                       </div>
-                    ) : (
-                      <Image
-                        src={mainImage}
-                        alt={initiative.title || initiative.name}
-                        fill
-                        className="object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                        onLoad={handleImageLoad}
-                        onError={handleImageError}
-                        onClick={() => openLightbox(mainImage)}
-                        priority
-                      />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -287,7 +328,7 @@ function InitiativeDetailPage() {
                   className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 whitespace-nowrap ${
                     activeTab === tab.id
                       ? `${colors.button}`
-                      : `${colors.buttonOutline} bg-white`
+                      : `border-2 ${colors.buttonOutline} bg-white`
                   }`}
                 >
                   <span>{tab.icon}</span>
@@ -316,11 +357,11 @@ function InitiativeDetailPage() {
                     </div>
                   </div>
 
-                  {/* Key Features */}
+                  {/* Key Features - Enhanced */}
                   {initiative.features && initiative.features.length > 0 && (
                     <div className="bg-white rounded-3xl shadow-lg p-8">
                       <h2 className="text-3xl font-bold text-gray-900 mb-6">Key Features</h2>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-cols-1 gap-4">
                         {initiative.features.map((feature, idx) => (
                           <div key={idx} className="flex items-start space-x-4 p-4 bg-green-50 rounded-2xl border border-green-200">
                             <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -328,7 +369,7 @@ function InitiativeDetailPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                               </svg>
                             </div>
-                            <p className="text-gray-800 font-semibold">{feature}</p>
+                            <p className="text-gray-800 font-semibold flex-1">{feature}</p>
                           </div>
                         ))}
                       </div>
@@ -342,29 +383,46 @@ function InitiativeDetailPage() {
                   <h2 className="text-3xl font-bold text-gray-900 mb-8">Impact Metrics</h2>
                   
                   {initiative.impact ? (
-                    <div className="text-center mb-8">
-                      <div className="text-6xl font-black text-teal-600 mb-4">
-                        {typeof initiative.impact === 'string' 
-                          ? initiative.impact 
-                          : `${initiative.impact.number}`}
-                      </div>
-                      {typeof initiative.impact === 'object' && (
-                        <>
-                          <div className="text-2xl font-bold text-gray-800 mb-2">{initiative.impact.metric}</div>
-                          {initiative.impact.description && (
-                            <p className="text-gray-600">{initiative.impact.description}</p>
-                          )}
-                        </>
-                      )}
-                      <div className="mt-6 bg-teal-100 rounded-full h-4 max-w-md mx-auto">
-                        <div className="bg-teal-600 h-4 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                    <div className="space-y-8">
+                      {/* Primary Impact Display */}
+                      <div className="text-center">
+                        <div className="text-6xl font-black text-teal-600 mb-4">
+                          {typeof initiative.impact === 'object' && initiative.impact.number
+                            ? initiative.impact.number
+                            : typeof initiative.impact === 'string' 
+                              ? initiative.impact 
+                              : 'Growing Impact'}
+                        </div>
+                        
+                        {typeof initiative.impact === 'object' && (
+                          <>
+                            {initiative.impact.metric && (
+                              <div className="text-2xl font-bold text-gray-800 mb-2">
+                                {initiative.impact.metric}
+                              </div>
+                            )}
+                            {initiative.impact.description && (
+                              <p className="text-gray-600 max-w-2xl mx-auto">
+                                {initiative.impact.description}
+                              </p>
+                            )}
+                          </>
+                        )}
+                        
+                        <div className="mt-6 bg-teal-100 rounded-full h-4 max-w-md mx-auto">
+                          <div className="bg-teal-600 h-4 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-12">
                       <div className="text-6xl mb-4">📊</div>
                       <h3 className="text-xl font-bold text-gray-800 mb-2">Impact Data Coming Soon</h3>
-                      <p className="text-gray-600">We&apos;re working on compiling detailed impact metrics for this initiative.</p>
+                      <p className="text-gray-600">
+                        {initiative && initiative.impact !== undefined
+                          ? "We're working on compiling detailed impact metrics for this initiative."
+                          : "Impact information is currently unavailable."}
+                      </p>
                     </div>
                   )}
 
@@ -393,24 +451,31 @@ function InitiativeDetailPage() {
                   {initiative.gallery && initiative.gallery.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {initiative.gallery.map((image, idx) => (
-                        <div 
-                          key={idx}
-                          className="relative aspect-square bg-gray-100 rounded-2xl overflow-hidden cursor-pointer group"
-                          onClick={() => openLightbox(image.url)}
-                        >
-                          <Image
-                            src={image.url}
-                            alt={image.caption || `Gallery image ${idx + 1}`}
-                            fill
-                            className="object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 bg-white rounded-full p-3 shadow-lg">
-                              <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                              </svg>
+                        <div key={idx} className="space-y-3">
+                          <div 
+                            className="relative aspect-square bg-gray-100 rounded-2xl overflow-hidden cursor-pointer group"
+                            onClick={() => openLightbox(image.url)}
+                          >
+                            <Image
+                              src={image.url}
+                              alt={image.caption || `Gallery image ${idx + 1}`}
+                              fill
+                              className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 bg-white rounded-full p-3 shadow-lg">
+                                <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                              </div>
                             </div>
                           </div>
+                          {/* Display Caption if Available */}
+                          {image.caption && (
+                            <p className="text-sm text-gray-600 text-center px-2">
+                              {image.caption}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -450,7 +515,7 @@ function InitiativeDetailPage() {
                       </p>
                       <Link 
                         href="/volunteer" 
-                        className={`inline-flex items-center ${colors.buttonOutline} px-6 py-3 rounded-xl font-bold transition-colors duration-300 shadow-lg`}
+                        className={`inline-flex items-center border-2 ${colors.buttonOutline} px-6 py-3 rounded-xl font-bold transition-colors duration-300 shadow-lg`}
                       >
                         <span className="mr-2">🤝</span>
                         Become a Volunteer
@@ -526,6 +591,21 @@ function InitiativeDetailPage() {
                       <div className="font-bold text-green-600">Active Program</div>
                     </div>
                   </div>
+
+                  {/* Additional Info for Multiple Images */}
+                  {mainImages.length > 1 && (
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500 font-semibold">Images</div>
+                        <div className="font-bold text-gray-900">{mainImages.length} Photos</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -546,6 +626,11 @@ function InitiativeDetailPage() {
                         <p className="text-sm text-gray-600 line-clamp-2">
                           {related.description}
                         </p>
+                        {related.featured && (
+                          <span className="inline-block mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded">
+                            Featured
+                          </span>
+                        )}
                       </Link>
                     ))}
                   </div>
@@ -569,7 +654,7 @@ function InitiativeDetailPage() {
         </div>
       </main>
 
-      {/* Lightbox Modal */}
+      {/* Enhanced Lightbox Modal */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"

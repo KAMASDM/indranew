@@ -309,7 +309,7 @@ const VolunteerPage = () => {
       <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
-        <header className="bg-gradient-to-r from-orange-400 to-orange-600 text-white relative overflow-hidden">
+        <header className="bg-orange-100 text-gray-800 relative overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-10"></div>
           <div className="relative z-10 text-center py-20">
             <div className="container mx-auto px-6">

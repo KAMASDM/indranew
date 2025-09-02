@@ -315,7 +315,7 @@ const defaultInitiatives = [
         <ImpactStats />
 
         {/* Initiatives Section - Mobile-First Design */}
-        <section className="py-12 lg:py-24 bg-gradient-to-b from-white to-gray-50">
+        <section className="py-12 lg:py-24 bg-cyan-50 ">
           <div className="px-4 lg:px-6 max-w-7xl mx-auto">
             {/* Section Header */}
             <div className="text-center mb-8 lg:mb-16">
@@ -351,7 +351,7 @@ const defaultInitiatives = [
                     return (
                       <div
                         key={item.id}
-                        className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden flex flex-col"
+                        className="group bg-blue-50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden flex flex-col"
                       >
                         {/* Image Section */}
                         <div className="relative bg-gray-100 h-48">
@@ -400,7 +400,7 @@ const defaultInitiatives = [
                           {/* Action Button */}
                           <div className="mt-auto">
                             <Link
-                              href={item.link || '#'}
+                              href={`/initiatives/${item.slug || item.id}`}
                               className="inline-flex items-center w-full justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md hover:shadow-lg"
                             >
                               Learn More
@@ -433,7 +433,7 @@ const defaultInitiatives = [
         </section>
 
         {/* Features Section - Mobile Optimized */}
-        <section className="py-12 lg:py-20 bg-gray-100">
+        <section className="py-12 lg:py-20 bg-blue">
           <div className="px-4 lg:px-6 max-w-7xl mx-auto">
             <div className="text-center mb-8 lg:mb-16">
               <div className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-4 lg:mb-6">
@@ -480,7 +480,7 @@ const defaultInitiatives = [
         </section>
 
         {/* Recent Events Section - Enhanced Design */}
-        <section className="py-12 lg:py-20 bg-gray-50">
+        <section className="py-12 lg:py-20 bg-cyan-50">
           <div className="px-4 lg:px-6 max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 lg:mb-16">
               <div>
@@ -518,7 +518,20 @@ const defaultInitiatives = [
             
             {events.length > 0 ? (
               <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 lg:gap-8 mb-8 lg:mb-12">
-                {events.map((event, index) => (
+                {[...events]
+                  .sort((a, b) => {
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const aDate = a.startDate ? new Date(a.startDate) : null;
+                    const bDate = b.startDate ? new Date(b.startDate) : null;
+                    const isAToday = aDate && aDate.toDateString() === today.toDateString();
+                    const isBToday = bDate && bDate.toDateString() === today.toDateString();
+                    if (isAToday && !isBToday) return -1;
+                    if (!isAToday && isBToday) return 1;
+                    if (aDate && bDate) return bDate - aDate;
+                    return 0;
+                  })
+                  .map((event, index) => (
                   <div
                     key={event.id}
                     className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-200 overflow-hidden"
@@ -640,25 +653,15 @@ const defaultInitiatives = [
 
                       {/* Action Button */}
                       <div className="flex items-center justify-between">
-                        {event.registrationUrl || event.link ? (
-                          <Link
-                            href={event.registrationUrl || event.link}
-                            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md hover:shadow-lg"
-                          >
-                            {event.status === 'upcoming' ? 'Register Now' : 'Learn More'}
-                            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                            </svg>
-                          </Link>
-                        ) : (
-                          <div className="inline-flex items-center text-gray-400 text-sm">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            More details coming soon
-                          </div>
-                        )}
-
+                        <Link
+                          href={`/events/${event.id}`}
+                          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md hover:shadow-lg"
+                        >
+                          Click for More Info
+                          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                          </svg>
+                        </Link>
                         {/* Event Category */}
                         {event.category && (
                           <div className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium">

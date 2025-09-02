@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ImpactStats from '../../components/ImpactStats';
+import IndraQR from '../../../src/img/indra-qr.png';
+
 
 const DonatePage = () => {
   const [selectedAmount, setSelectedAmount] = useState(100);
@@ -138,7 +140,7 @@ const DonatePage = () => {
       <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-orange-400 to-orange-600 text-white relative overflow-hidden">
+        <section className="bg-orange-100 text-gray-500 relative overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-20"></div>
           <div className="relative z-10 container mx-auto px-6 py-20">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -240,13 +242,13 @@ const DonatePage = () => {
                     </div>
 
                     {/* Step 1: Amount Selection */}
+                    {/* Step 1: Donation Type Selection (No Amount) */}
                     {activeTab === 'amount' && (
                       <div className="space-y-8">
-                        {/* Donation Type */}
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Donation Type</h3>
+                          <h3 className="text-lg font-semibold text-orange-700 mb-4">Donation Type</h3>
                           <div className="grid grid-cols-2 gap-4">
-                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'one-time' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'one-time' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}> 
                               <input
                                 type="radio"
                                 value="one-time"
@@ -256,11 +258,11 @@ const DonatePage = () => {
                               />
                               <div className="text-center w-full">
                                 <div className="text-2xl mb-2">💝</div>
-                                <div className="font-semibold">One-time</div>
-                                <div className="text-sm text-gray-600">Single donation</div>
+                                <div className="font-semibold text-orange-700">One-time</div>
+                                <div className="text-sm text-orange-600">Single donation</div>
                               </div>
                             </label>
-                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'monthly' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'monthly' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}> 
                               <input
                                 type="radio"
                                 value="monthly"
@@ -270,54 +272,12 @@ const DonatePage = () => {
                               />
                               <div className="text-center w-full">
                                 <div className="text-2xl mb-2">📅</div>
-                                <div className="font-semibold">Monthly</div>
-                                <div className="text-sm text-gray-600">Recurring donation</div>
+                                <div className="font-semibold text-orange-700">Monthly</div>
+                                <div className="text-sm text-orange-600">Recurring donation</div>
                               </div>
                             </label>
                           </div>
                         </div>
-
-                        {/* Amount Selection */}
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Amount (₹)</h3>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-6">
-                            {donationAmounts.map(amount => (
-                              <button
-                                key={amount}
-                                onClick={() => {
-                                  setSelectedAmount(amount);
-                                  setCustomAmount('');
-                                }}
-                                className={`p-4 rounded-lg font-semibold transition-all duration-200 ${
-                                  selectedAmount === amount && !customAmount
-                                    ? 'bg-orange-500 text-white shadow-lg transform scale-105'
-                                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                                }`}
-                              >
-                                ₹{amount}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Custom Amount */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Or enter custom amount
-                            </label>
-                            <input
-                              type="number"
-                              value={customAmount}
-                              onChange={(e) => {
-                                setCustomAmount(e.target.value);
-                                setSelectedAmount(0);
-                              }}
-                              placeholder="Enter amount in ₹"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                              min="1"
-                            />
-                          </div>
-                        </div>
-
                         <div className="flex justify-end">
                           <button
                             onClick={() => setActiveTab('cause')}
@@ -332,7 +292,7 @@ const DonatePage = () => {
                     {/* Step 2: Cause Selection */}
                     {activeTab === 'cause' && (
                       <div className="space-y-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Choose Your Cause</h3>
+                        <h3 className="text-lg font-semibold text-orange-700 mb-4">Choose Your Cause</h3>
                         <div className="space-y-4">
                           {causes.map(cause => (
                             <label
@@ -382,19 +342,15 @@ const DonatePage = () => {
                     {activeTab === 'payment' && (
                       <div className="space-y-8">
                         <div className="bg-orange-50 rounded-lg p-6">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Donation Summary</h3>
+                          <h3 className="text-lg font-semibold text-orange-700 mb-4">Donation Summary</h3>
                           <div className="space-y-2">
                             <div className="flex justify-between">
-                              <span>Amount:</span>
-                              <span className="font-bold">₹{customAmount || selectedAmount}</span>
+                              <span className="text-orange-700">Type:</span>
+                              <span className="font-bold capitalize text-orange-700">{donationType}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Type:</span>
-                              <span className="font-bold capitalize">{donationType}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Cause:</span>
-                              <span className="font-bold">{causes.find(c => c.id === selectedCause)?.name}</span>
+                              <span className="text-orange-700">Cause:</span>
+                              <span className="font-bold text-orange-700">{causes.find(c => c.id === selectedCause)?.name}</span>
                             </div>
                             <hr className="my-2" />
                             <div className="flex justify-between text-lg font-bold text-orange-600">
@@ -412,15 +368,13 @@ const DonatePage = () => {
                           
                           <div className="bg-white border-2 border-gray-200 rounded-lg p-6 inline-block">
                             <Image 
-                              src="/donate-qr.jpeg" 
+                              src={IndraQR}
                               alt="Donation QR Code" 
                               width={250} 
                               height={250} 
                               className="mx-auto rounded-lg shadow-lg"
                             />
-                            <p className="mt-4 text-sm text-gray-600 font-medium">
-                              UPI ID: indraprasth@upi
-                            </p>
+                           
                           </div>
 
                           <div className="mt-6 text-sm text-gray-600">
@@ -468,15 +422,12 @@ const DonatePage = () => {
                 <div className="space-y-8">
                   {/* Current Impact */}
                   <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Your Impact</h3>
+                    <h3 className="text-xl font-bold text-orange-700 mb-4">Your Impact</h3>
                     <div className="text-center bg-orange-50 rounded-lg p-6">
                       <div className="text-3xl font-bold text-orange-600 mb-2">
-                        ₹{customAmount || selectedAmount}
-                      </div>
-                      <div className="text-gray-700 font-medium mb-4">
                         {getCurrentImpact().impact}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-orange-600">
                         {donationType === 'monthly' && 'Every month'}
                       </div>
                     </div>
@@ -484,14 +435,14 @@ const DonatePage = () => {
 
                   {/* Donor Benefits */}
                   <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Donor Benefits</h3>
+                    <h3 className="text-xl font-bold text-orange-700 mb-4">Donor Benefits</h3>
                     <div className="space-y-4">
                       {donorBenefits.map((benefit, index) => (
                         <div key={index} className="flex items-start space-x-3">
                           <div className="text-2xl">{benefit.icon}</div>
                           <div>
-                            <div className="font-semibold text-gray-800">{benefit.title}</div>
-                            <div className="text-sm text-gray-600">{benefit.description}</div>
+                            <div className="font-semibold text-orange-700">{benefit.title}</div>
+                            <div className="text-sm text-orange-600">{benefit.description}</div>
                           </div>
                         </div>
                       ))}
@@ -499,7 +450,7 @@ const DonatePage = () => {
                   </div>
 
                   {/* Trust Indicators */}
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl p-6">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 text-indigo-700 rounded-2xl p-6">
                     <h3 className="text-xl font-bold mb-4">Why Trust Us?</h3>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
@@ -530,24 +481,24 @@ const DonatePage = () => {
         <section className="py-20 bg-white">
           <div className="container mx-auto px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">What Our Donors Say</h2>
-              <p className="text-lg text-gray-600">Hear from our generous supporters</p>
+              <h2 className="text-3xl font-bold text-orange-700 mb-4">What Our Donors Say</h2>
+              <p className="text-lg text-orange-600">Hear from our generous supporters</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {testimonials.map((testimonial, index) => (
-                <div key={index} className="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                      {testimonial.name.charAt(0)}
+                  <div key={index} className="bg-orange-50 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
+                    <div className="flex items-center mb-4">
+                      <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
+                        {testimonial.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-orange-700">{testimonial.name}</h4>
+                        <p className="text-sm text-orange-600">{testimonial.role}</p>
+                        <p className="text-sm text-orange-700 font-medium">{testimonial.amount}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800">{testimonial.name}</h4>
-                      <p className="text-sm text-gray-600">{testimonial.role}</p>
-                      <p className="text-sm text-orange-600 font-medium">{testimonial.amount}</p>
-                    </div>
+                    <p className="text-orange-600 italic">&quot;{testimonial.quote}&quot;</p>
                   </div>
-                  <p className="text-gray-600 italic">&quot;{testimonial.quote}&quot;</p>
-                </div>
               ))}
             </div>
           </div>
@@ -560,7 +511,7 @@ const DonatePage = () => {
         <section className="py-20 bg-gray-50">
           <div className="container mx-auto px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">Frequently Asked Questions</h2>
+              <h2 className="text-3xl font-bold text-orange-700 mb-4">Frequently Asked Questions</h2>
             </div>
             <div className="max-w-3xl mx-auto space-y-6">
               {[
@@ -582,8 +533,8 @@ const DonatePage = () => {
                 }
               ].map((faq, index) => (
                 <div key={index} className="bg-white rounded-lg p-6 shadow-md">
-                  <h3 className="font-semibold text-gray-800 mb-2">{faq.question}</h3>
-                  <p className="text-gray-600">{faq.answer}</p>
+                  <h3 className="font-semibold text-orange-700 mb-2">{faq.question}</h3>
+                  <p className="text-orange-600">{faq.answer}</p>
                 </div>
               ))}
             </div>

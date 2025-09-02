@@ -48,7 +48,7 @@ const ContactPage = () => {
       ],
       action: {
         text: 'Get Directions',
-        href: 'https://maps.google.com/?q=Vadodara,Gujarat,India'
+        href: 'https://maps.app.goo.gl/F7B8iChviXa3RfNv7'
       }
     },
     {
@@ -246,7 +246,7 @@ const ContactPage = () => {
       <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
-        <header className="bg-gradient-to-r from-orange-400 to-orange-600 text-white relative overflow-hidden">
+        <header className="bg-orange-100 text-gray-500 relative overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-10"></div>
           <div className="relative z-10 text-center py-20">
             <div className="container mx-auto px-6">
@@ -404,7 +404,7 @@ const ContactPage = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+                    className="w-full bg-orange-500 text-gray-100 font-bold py-4 px-8 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
                   >
                     {loading ? (
                       <>
@@ -461,24 +461,7 @@ const ContactPage = () => {
                 </div>
               ))}
 
-              {/* Emergency Contact */}
-              <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                <div className="flex items-center space-x-3 mb-3">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                  </svg>
-                  <h3 className="font-semibold text-red-800">Emergency Contact</h3>
-                </div>
-                <p className="text-red-700 text-sm mb-3">
-                  For urgent matters or if you need immediate assistance, please call our emergency helpline.
-                </p>
-                <a
-                  href="tel:+911234567890"
-                  className="inline-flex items-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300 text-sm font-medium"
-                >
-                  📞 Call Emergency Line
-                </a>
-              </div>
+            
             </div>
           </div>
         </main>
