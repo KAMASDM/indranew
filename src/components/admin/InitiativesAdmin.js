@@ -8,6 +8,45 @@ import Image from 'next/image';
 
 // Modal for Adding/Editing an Initiative
 function InitiativeModal({ initiative, onClose, onSave }) {
+  // Delete a gallery image from Firebase Storage and update state
+  const handleDeleteGalleryImage = async (imgUrl, index) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) return;
+    setLoading(true);
+    try {
+      await deleteObject(ref(storage, imgUrl));
+      const newGallery = [...formData.gallery];
+      newGallery.splice(index, 1);
+      setFormData({ ...formData, gallery: newGallery });
+    } catch (error) {
+      alert('Failed to delete image.');
+      console.error('Error deleting gallery image:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete main image from Firebase Storage and update state
+  const handleDeleteMainImage = async (imgUrl, index) => {
+    if (!window.confirm('Are you sure you want to delete this main image?')) return;
+    setLoading(true);
+    try {
+      await deleteObject(ref(storage, imgUrl));
+      let newImageUrl;
+      if (Array.isArray(formData.imageUrl)) {
+        newImageUrl = [...formData.imageUrl];
+        newImageUrl.splice(index, 1);
+      } else {
+        newImageUrl = '';
+      }
+      setFormData({ ...formData, imageUrl: newImageUrl });
+    } catch (error) {
+      alert('Failed to delete main image.');
+      console.error('Error deleting main image:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const initialData = {
     title: '',
     slug: '',
@@ -172,10 +211,32 @@ function InitiativeModal({ initiative, onClose, onSave }) {
                     <img key={i} src={URL.createObjectURL(file)} alt="Preview" width={80} height={60} className="rounded object-cover border" />
                   ))}
                   {Array.isArray(formData.imageUrl) && formData.imageUrl.map((url, i) => (
-                    <Image key={i} src={url} alt="Current Main" width={80} height={60} className="rounded object-cover border" />
+                    url ? (
+                      <div key={i} className="relative">
+                        <Image src={url} alt="Current Main" width={80} height={60} className="rounded object-cover border" />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMainImage(url, i)}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow hover:bg-red-700"
+                          title="Delete main image"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : null
                   ))}
                   {typeof formData.imageUrl === 'string' && formData.imageUrl && (
-                    <Image src={formData.imageUrl} alt="Current Main" width={80} height={60} className="rounded object-cover border" />
+                    <div className="relative">
+                      <Image src={formData.imageUrl} alt="Current Main" width={80} height={60} className="rounded object-cover border" />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMainImage(formData.imageUrl, 0)}
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow hover:bg-red-700"
+                        title="Delete main image"
+                      >
+                        ×
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -184,7 +245,19 @@ function InitiativeModal({ initiative, onClose, onSave }) {
                 <input type="file" multiple onChange={(e) => handleFileChange(e, 'gallery')} className="w-full border-2 border-cyan-200 p-2 rounded bg-white text-gray-800"/>
                 {formData.gallery && formData.gallery.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.gallery.map((img, i) => <Image key={i} src={img.url} alt="Gallery" width={60} height={60} className="rounded object-cover"/>)}
+                    {formData.gallery.map((img, i) => (
+                      <div key={i} className="relative">
+                        <Image src={img.url} alt="Gallery" width={60} height={60} className="rounded object-cover"/>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGalleryImage(img.url, i)}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow hover:bg-red-700"
+                          title="Delete image"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -295,17 +368,18 @@ export default function InitiativesAdmin({ initiatives, fetchAllData }) {
                         )}
                       </div>
                       
-                      {initiative.imageUrl ? (
+                      {initiative.imageUrl && initiative.imageUrl !== '' && (
                         <div className="relative mb-4">
                           <Image
-                            src={initiative.imageUrl}
+                            src={Array.isArray(initiative.imageUrl) ? initiative.imageUrl[0] : initiative.imageUrl}
                             alt={initiative.title || 'Initiative image'}
                             width={400}
                             height={200}
                             className="rounded-xl object-cover w-full h-48 border border-gray-200"
                           />
                         </div>
-                      ) : (
+                      )}
+                      {(!initiative.imageUrl || initiative.imageUrl === '') && (
                         <div className="w-full h-48 bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center rounded-xl border-2 border-dashed mb-4">
                           <span className="text-cyan-300 font-medium">No Image</span>
                         </div>
