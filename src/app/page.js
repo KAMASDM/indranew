@@ -174,11 +174,16 @@ const defaultInitiatives = [
           if (initiativesSnapshot.empty) {
             setInitiatives(defaultInitiatives);
           } else {
-            const initiativesData = initiativesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              impact: doc.data().impact?.number + ' ' + doc.data().impact?.metric || 'Making Impact'
-            }));
+            const initiativesData = initiativesSnapshot.docs.map(doc => {
+              const data = doc.data();
+              const impactNumber = data.impact?.number || '';
+              const impactMetric = data.impact?.metric || '';
+              return {
+                id: doc.id,
+                ...data,
+                impact: (impactNumber && impactMetric) ? `${impactNumber} ${impactMetric}` : (data.impact || 'Making Impact')
+              };
+            });
             setInitiatives(initiativesData.slice(0, 4));
           }
         } catch (error) {
@@ -355,14 +360,35 @@ const defaultInitiatives = [
                       >
                         {/* Image Section */}
                         <div className="relative bg-gray-100 h-48">
-                          <Image
-                            src={item.imageUrl || item.image?.url || item.bannerImage || item.icon || getFallbackImage(item.category)}
-                            alt={`${item.name} initiative`}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                            onError={(e) => handleImageError(e, item.category)}
-                          />
+                          {(() => {
+                            // Extract image URL - handle both string and array formats
+                            let imageUrl = null;
+                            if (Array.isArray(item.imageUrl) && item.imageUrl.length > 0) {
+                              imageUrl = item.imageUrl[0];
+                            } else if (typeof item.imageUrl === 'string' && item.imageUrl.trim()) {
+                              imageUrl = item.imageUrl;
+                            } else if (item.image?.url) {
+                              imageUrl = item.image.url;
+                            } else if (item.bannerImage) {
+                              imageUrl = item.bannerImage;
+                            } else if (item.icon) {
+                              imageUrl = item.icon;
+                            }
+                            
+                            // Use fallback if no valid image
+                            const finalImageUrl = imageUrl || getFallbackImage(item.category);
+                            
+                            return (
+                              <Image
+                                src={finalImageUrl}
+                                alt={`${item.title || item.name} initiative`}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                                onError={(e) => handleImageError(e, item.category)}
+                              />
+                            );
+                          })()}
                           
                           {/* Category Badge */}
                           {item.category && (
@@ -372,16 +398,18 @@ const defaultInitiatives = [
                           )}
 
                           {/* Impact Badge */}
-                          <div className="absolute bottom-3 right-3 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">
-                            {item.impact}
-                          </div>
+                          {item.impact && (
+                            <div className="absolute bottom-3 right-3 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">
+                              {typeof item.impact === 'string' ? item.impact : `${item.impact.number || ''} ${item.impact.metric || ''}`.trim() || 'Making Impact'}
+                            </div>
+                          )}
                         </div>
 
                         {/* Content Section - Fixed Height */}
                         <div className="p-6 flex flex-col justify-between flex-1 min-h-[260px]">
                           <div className="flex-1">
                             <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
-                              {item.name}
+                              {item.title || item.name}
                             </h3>
                             
                             <div className="text-gray-600 leading-relaxed mb-4">
@@ -744,7 +772,7 @@ const defaultInitiatives = [
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                         <div className="text-center text-white">
                           <svg className="w-8 h-8 lg:w-12 lg:h-12 mx-auto mb-2 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                           </svg>
                           <p className="text-xs lg:text-sm">Gallery Image</p>
                         </div>
@@ -783,7 +811,7 @@ const defaultInitiatives = [
                   className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 lg:px-10 lg:py-4 rounded-lg font-bold text-base lg:text-lg transition-colors duration-300 shadow-xl hover:shadow-2xl"
                 >
                   <svg className="mr-2 lg:mr-3 w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                   Explore Full Gallery
                 </Link>

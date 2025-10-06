@@ -140,7 +140,7 @@ const DonatePage = () => {
       <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
-        <section className="bg-orange-100 text-gray-500 relative overflow-hidden">
+        <section className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-20"></div>
           <div className="relative z-10 container mx-auto px-6 py-20">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -168,10 +168,10 @@ const DonatePage = () => {
                 </div>
                 <button
                   onClick={() => document.getElementById('donation-form').scrollIntoView({ behavior: 'smooth' })}
-                  className="bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg inline-flex items-center"
+                  className="bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-orange-50 hover:shadow-xl transition-all duration-300 transform hover:scale-105 shadow-lg inline-flex items-center"
                 >
                   <span className="mr-2">💝</span>
-                  Start Donating
+                  Start Donating Now
                 </button>
               </div>
               <div className="relative">
@@ -207,18 +207,18 @@ const DonatePage = () => {
         </section>
 
         {/* Donation Form Section */}
-        <section id="donation-form" className="py-20 bg-gray-50">
+        <section id="donation-form" className="py-20 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
           <div className="container mx-auto px-6">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-gray-800 mb-4">Make Your Donation</h2>
-                <p className="text-lg text-gray-600">Choose your donation amount and see the immediate impact</p>
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent mb-4">Make Your Donation</h2>
+                <p className="text-lg text-gray-700 font-medium">Choose your donation type and cause to see the immediate impact</p>
               </div>
 
               <div className="grid lg:grid-cols-3 gap-12">
                 {/* Donation Form */}
                 <div className="lg:col-span-2">
-                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 border-2 border-orange-100">
                     {/* Tab Navigation */}
                     <div className="flex border-b border-gray-200 mb-8">
                       {[
@@ -248,7 +248,7 @@ const DonatePage = () => {
                         <div>
                           <h3 className="text-lg font-semibold text-orange-700 mb-4">Donation Type</h3>
                           <div className="grid grid-cols-2 gap-4">
-                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'one-time' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}> 
+                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 transform hover:scale-105 ${donationType === 'one-time' ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-pink-50 shadow-lg' : 'border-gray-300 hover:border-orange-300 hover:shadow-md'}`}> 
                               <input
                                 type="radio"
                                 value="one-time"
@@ -262,7 +262,7 @@ const DonatePage = () => {
                                 <div className="text-sm text-orange-600">Single donation</div>
                               </div>
                             </label>
-                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${donationType === 'monthly' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}> 
+                            <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 transform hover:scale-105 ${donationType === 'monthly' ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-pink-50 shadow-lg' : 'border-gray-300 hover:border-orange-300 hover:shadow-md'}`}> 
                               <input
                                 type="radio"
                                 value="monthly"
@@ -297,10 +297,10 @@ const DonatePage = () => {
                           {causes.map(cause => (
                             <label
                               key={cause.id}
-                              className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 transform hover:scale-[1.02] ${
                                 selectedCause === cause.id
-                                  ? 'border-orange-500 bg-orange-50'
-                                  : 'border-gray-300 hover:border-gray-400'
+                                  ? 'border-orange-500 bg-gradient-to-r from-orange-50 to-pink-50 shadow-lg'
+                                  : 'border-gray-300 hover:border-orange-300 hover:shadow-md'
                               }`}
                             >
                               <input
@@ -341,19 +341,19 @@ const DonatePage = () => {
                     {/* Step 3: Payment */}
                     {activeTab === 'payment' && (
                       <div className="space-y-8">
-                        <div className="bg-orange-50 rounded-lg p-6">
-                          <h3 className="text-lg font-semibold text-orange-700 mb-4">Donation Summary</h3>
+                        <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg p-6 border-2 border-orange-200 shadow-md">
+                          <h3 className="text-lg font-semibold text-orange-800 mb-4">Donation Summary</h3>
                           <div className="space-y-2">
                             <div className="flex justify-between">
-                              <span className="text-orange-700">Type:</span>
-                              <span className="font-bold capitalize text-orange-700">{donationType}</span>
+                              <span className="text-orange-800">Type:</span>
+                              <span className="font-bold capitalize text-orange-900">{donationType}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-orange-700">Cause:</span>
-                              <span className="font-bold text-orange-700">{causes.find(c => c.id === selectedCause)?.name}</span>
+                              <span className="text-orange-800">Cause:</span>
+                              <span className="font-bold text-orange-900">{causes.find(c => c.id === selectedCause)?.name}</span>
                             </div>
-                            <hr className="my-2" />
-                            <div className="flex justify-between text-lg font-bold text-orange-600">
+                            <hr className="my-2 border-orange-300" />
+                            <div className="flex justify-between text-lg font-bold text-orange-900">
                               <span>Impact:</span>
                               <span>{getCurrentImpact().impact}</span>
                             </div>

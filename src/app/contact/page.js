@@ -246,8 +246,8 @@ const ContactPage = () => {
       <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
-        <header className="bg-orange-100 text-gray-500 relative overflow-hidden">
-          <div className="absolute inset-0 bg-black opacity-10"></div>
+        <header className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black opacity-20"></div>
           <div className="relative z-10 text-center py-20">
             <div className="container mx-auto px-6">
               <h1 className="text-5xl font-bold mb-4">Get in Touch</h1>

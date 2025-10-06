@@ -64,10 +64,17 @@ function InitiativeModal({ initiative, onClose, onSave }) {
   const [mainImageFiles, setMainImageFiles] = useState([]);
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let newFormData = { ...formData };
+    
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
     
     if (name.startsWith('impact.')) {
       const field = name.split('.')[1];
@@ -82,6 +89,23 @@ function InitiativeModal({ initiative, onClose, onSave }) {
     }
     
     setFormData(newFormData);
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.slug.trim()) newErrors.slug = 'Slug is required';
+    if (!formData.description.trim()) newErrors.description = 'Short description is required';
+    if (!formData.category.trim()) newErrors.category = 'Category is required';
+    
+    // Validate slug format
+    if (formData.slug && !/^[a-z0-9-]+$/.test(formData.slug)) {
+      newErrors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleFeatureChange = (index, value) => {
@@ -100,7 +124,16 @@ function InitiativeModal({ initiative, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      setSubmitError('Please fix the errors above before submitting.');
+      return;
+    }
+    
     setLoading(true);
+    setSubmitError('');
+    
     try {
       let mainImageUrls = formData.imageUrl ? (Array.isArray(formData.imageUrl) ? [...formData.imageUrl] : [formData.imageUrl]) : [];
       const initiativeId = formData.id || Date.now(); // Use existing ID or generate a temporary one for storage path
@@ -137,7 +170,7 @@ function InitiativeModal({ initiative, onClose, onSave }) {
       onClose();
     } catch (error) {
       console.error("Error saving initiative:", error);
-      alert("Failed to save initiative. Check console for details.");
+      setSubmitError(`Failed to save initiative: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -150,14 +183,61 @@ function InitiativeModal({ initiative, onClose, onSave }) {
           <h2 className="text-3xl font-extrabold text-teal-700">{initiative ? 'Edit Initiative' : 'Add New Initiative'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-teal-600 text-3xl">&times;</button>
         </div>
+        
+        {/* Error Message Display */}
+        {submitError && (
+          <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg flex items-start gap-3">
+            <span className="text-red-500 text-xl">⚠️</span>
+            <div className="flex-1">
+              <p className="text-red-700 font-semibold">Error Saving Initiative</p>
+              <p className="text-red-600 text-sm">{submitError}</p>
+            </div>
+            <button onClick={() => setSubmitError('')} className="text-red-400 hover:text-red-600">&times;</button>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <fieldset className="border-2 border-teal-100 p-4 rounded-xl bg-teal-50/30">
             <legend className="font-semibold px-2 text-lg text-teal-700">Basic Information</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-2">
-              <input name="title" value={formData.title} onChange={handleChange} placeholder="Initiative Title" required className="w-full border-2 border-teal-200 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800"/>
-              <input name="slug" value={formData.slug} onChange={handleChange} placeholder="URL Slug" required className="w-full border-2 border-teal-200 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800"/>
-              <input name="category" value={formData.category} onChange={handleChange} placeholder="Category (e.g., food-security)" required className="w-full border-2 border-teal-200 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800"/>
+              <div>
+                <input 
+                  name="title" 
+                  value={formData.title} 
+                  onChange={handleChange} 
+                  placeholder="Initiative Title *" 
+                  required 
+                  className={`w-full border-2 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800 ${errors.title ? 'border-red-500' : 'border-teal-200'}`}
+                />
+                {errors.title && <p className="text-red-500 text-xs mt-1">⚠ {errors.title}</p>}
+              </div>
+              <div>
+                <input 
+                  name="slug" 
+                  value={formData.slug} 
+                  onChange={handleChange} 
+                  placeholder="URL Slug (auto-generated) *" 
+                  required 
+                  className={`w-full border-2 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800 ${errors.slug ? 'border-red-500' : 'border-teal-200'}`}
+                />
+                {errors.slug && <p className="text-red-500 text-xs mt-1">⚠ {errors.slug}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-teal-700 mb-1">
+                  Category * 
+                  <span className="text-xs text-gray-500 ml-2">(lowercase with hyphens, e.g., food-security, education, healthcare)</span>
+                </label>
+                <input 
+                  name="category" 
+                  value={formData.category} 
+                  onChange={handleChange} 
+                  placeholder="food-security" 
+                  required 
+                  className={`w-full border-2 p-3 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white text-gray-800 ${errors.category ? 'border-red-500' : 'border-teal-200'}`}
+                />
+                {errors.category && <p className="text-red-500 text-xs mt-1">⚠ {errors.category}</p>}
+              </div>
               <div className="flex items-center gap-3 bg-teal-50 p-3 rounded-lg">
                 <input type="checkbox" name="featured" id="featured" checked={formData.featured} onChange={handleChange} className="h-5 w-5 text-teal-600 focus:ring-teal-500 border-teal-300 rounded"/>
                 <label htmlFor="featured" className="font-semibold text-teal-700">Mark as Featured</label>
@@ -169,7 +249,18 @@ function InitiativeModal({ initiative, onClose, onSave }) {
           <fieldset className="border-2 border-blue-100 p-4 rounded-xl bg-blue-50/30">
             <legend className="font-semibold px-2 text-lg text-blue-700">Content</legend>
             <div className="p-2 space-y-4">
-              <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Short Description (for cards)" required className="w-full border-2 border-blue-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-800" rows="3"></textarea>
+              <div>
+                <textarea 
+                  name="description" 
+                  value={formData.description} 
+                  onChange={handleChange} 
+                  placeholder="Short Description (for cards) *" 
+                  required 
+                  className={`w-full border-2 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-800 ${errors.description ? 'border-red-500' : 'border-blue-200'}`}
+                  rows="3"
+                ></textarea>
+                {errors.description && <p className="text-red-500 text-xs mt-1">⚠ {errors.description}</p>}
+              </div>
               <textarea name="longDescription" value={formData.longDescription} onChange={handleChange} placeholder="Long Description (supports basic HTML)" className="w-full border-2 border-blue-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-800" rows="6"></textarea>
             </div>
           </fieldset>
@@ -323,7 +414,7 @@ export default function InitiativesAdmin({ initiatives, fetchAllData }) {
                 <span className="mr-3 text-3xl">🎯</span>
                 Add New Initiative
               </h2>
-              <p className="text-indigo-600 mt-1">Create and manage your community initiatives from here.</p>
+              <p className="text-white mt-1">Create and manage your community initiatives from here.</p>
             </div>
             <button 
               onClick={() => { setEditingInitiative(null); setIsModalOpen(true); }} 
@@ -393,13 +484,13 @@ export default function InitiativesAdmin({ initiatives, fetchAllData }) {
                     <div className="mt-6 pt-4 border-t-2 border-teal-100 flex justify-end items-center gap-2">
                       <button
                         onClick={() => { setEditingInitiative(initiative); setIsModalOpen(true); }}
-                        className="px-4 py-2 text-sm font-bold text-indigo-600 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-lg transition-colors shadow"
+                        className="px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-lg transition-colors shadow"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteInitiative(initiative)}
-                        className="px-4 py-2 text-sm font-bold text-indigo-600 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-lg transition-colors shadow"
+                        className="px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-lg transition-colors shadow"
                         disabled={loadingDelete}
                       >
                         {loadingDelete ? <LoadingSpinner size="sm" /> : 'Delete'}

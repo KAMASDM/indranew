@@ -316,7 +316,20 @@ const InitiativesPage = () => {
                       </div>
                     ) : (
                       <Image
-                        src={initiative.imageUrl || initiative.image?.url || getFallbackImage(initiative.category)}
+                        src={(() => {
+                          // Handle array format from admin
+                          let imageUrl = null;
+                          if (Array.isArray(initiative.imageUrl) && initiative.imageUrl.length > 0) {
+                            imageUrl = initiative.imageUrl[0];
+                          } else if (typeof initiative.imageUrl === 'string' && initiative.imageUrl.trim()) {
+                            imageUrl = initiative.imageUrl;
+                          }
+                          // Fallback chain
+                          if (!imageUrl) {
+                            imageUrl = initiative.image?.url || initiative.bannerImage || getFallbackImage(initiative.category);
+                          }
+                          return imageUrl;
+                        })()}
                         alt={initiative.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
