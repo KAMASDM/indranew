@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import LoadingSpinner from './LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
@@ -37,13 +37,13 @@ const Hero = () => {
           });
           setImageLoadingStates(initialLoadingStates);
         } else {
-          setHeroImages([{ url: '/default-hero.jpg', id: 'default' }]);
+          setHeroImages([{ url: '/about-story.jpg', id: 'default' }]);
           setImageLoadingStates({ 0: true });
         }
       } catch (error) {
         console.error('Error fetching hero images:', error);
         setFetchError(error.message || 'Error fetching hero images');
-        setHeroImages([{ url: '/default-hero.jpg', id: 'default' }]);
+        setHeroImages([{ url: '/about-story.jpg', id: 'default' }]);
         setImageLoadingStates({ 0: true });
       } finally {
         setLoading(false);

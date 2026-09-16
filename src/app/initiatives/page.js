@@ -3,18 +3,16 @@
 import { useEffect, useState } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 const FALLBACK_IMAGES = {
-  'food-security': '/images/fallbacks/food-security.jpg',
-  'education': '/images/fallbacks/education.jpg',
-  'basic-needs': '/images/fallbacks/basic-needs.jpg',
-  'environment': '/images/fallbacks/environment.jpg',
-  'default': '/images/fallbacks/default.jpg'
+  'food-security': '/image-placeholder.svg',
+  'education': '/image-placeholder.svg',
+  'basic-needs': '/image-placeholder.svg',
+  'environment': '/image-placeholder.svg',
+  'default': '/image-placeholder.svg'
 };
 
 const InitiativesPage = () => {
@@ -118,7 +116,6 @@ const InitiativesPage = () => {
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen flex flex-col">
-        <Navbar />
         <main className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
             <div className="inline-flex items-center space-x-4 bg-white rounded-2xl shadow-xl px-8 py-6 mb-8">
@@ -128,7 +125,6 @@ const InitiativesPage = () => {
             <p className="text-gray-500">Discovering amazing community programs</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -136,7 +132,6 @@ const InitiativesPage = () => {
   if (error) {
     return (
       <div className="bg-gray-50 min-h-screen flex flex-col">
-        <Navbar />
         <main className="flex-1 flex items-center justify-center py-20">
           <div className="text-center max-w-md mx-auto px-6">
             <div className="w-24 h-24 mx-auto bg-red-100 rounded-2xl flex items-center justify-center mb-8">
@@ -154,14 +149,12 @@ const InitiativesPage = () => {
             </button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-100 via-cyan-100 to-blue-100 text-gray-900 overflow-hidden">
@@ -422,8 +415,6 @@ const InitiativesPage = () => {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

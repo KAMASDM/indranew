@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { collection, getDocs, query } from 'firebase/firestore';
 import * as faceapi from 'face-api.js';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 // Enhanced model loading with multiple detection options
@@ -13,10 +13,8 @@ const loadModels = async () => {
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // More accurate detector
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL), // Optional: for additional filtering
     ]);
     console.log("All face models loaded successfully.");
     return true;
@@ -39,6 +37,9 @@ const loadModels = async () => {
 };
 
 const SearchYourImagePage = () => {
+  const [modelError, setModelError] = useState(false);
+  const [modelAttempt, setModelAttempt] = useState(0);
+  const searchCancelled = useRef(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [userImage, setUserImage] = useState(null);
   const [userImagePreview, setUserImagePreview] = useState(null);
@@ -60,12 +61,19 @@ const SearchYourImagePage = () => {
   const imageInputRef = useRef(null);
 
   useEffect(() => {
-    loadModels().then(setModelsLoaded);
-  }, []);
+    let active = true;
+    setModelError(false);
+    loadModels().then(loaded => { if (active) { setModelsLoaded(loaded); setModelError(!loaded); } });
+    return () => { active = false; searchCancelled.current = true; };
+  }, [modelAttempt]);
+
+  useEffect(() => () => { if (userImagePreview) URL.revokeObjectURL(userImagePreview); }, [userImagePreview]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
+    if (isSearching) return;
     if (file) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { setError('Use a JPEG, PNG or WebP photo up to 10 MB.'); return; }
       setUserImage(file);
       setUserImagePreview(URL.createObjectURL(file));
       setError('');
@@ -75,7 +83,7 @@ const SearchYourImagePage = () => {
   };
   
   const fetchAllImageUrls = async () => {
-    const urls = new Set();
+    const urls = new Map();
     const collectionsToSearch = ['gallery', 'events'];
 
     for (const coll of collectionsToSearch) {
@@ -84,19 +92,19 @@ const SearchYourImagePage = () => {
         snapshot.forEach(doc => {
             const data = doc.data();
             if (coll === 'gallery' && data.url) {
-                urls.add({ url: data.url, link: '/gallery', source: 'gallery' });
+                urls.set(data.url, { url: data.url, link: '/gallery', source: 'gallery' });
             }
             if (coll === 'events' && data.images && Array.isArray(data.images)) {
                 data.images.forEach(img => {
                     if (img.url) {
-                        urls.add({ url: img.url, link: `/events/${doc.id}`, source: 'events' });
+                        urls.set(img.url, { url: img.url, link: `/events/${doc.id}`, source: 'events' });
                     }
                 });
             }
         });
     }
     
-    return Array.from(urls);
+    return Array.from(urls.values());
   };
 
   // Enhanced image preprocessing
@@ -181,7 +189,7 @@ const SearchYourImagePage = () => {
     // 3. The confidence is high
     if (match.label !== 'unknown') {
       const confidence = 1 - match.distance;
-      const isHighConfidence = match.distance < sensitivity && confidence > 0.6;
+      const isHighConfidence = match.distance <= sensitivity;
       
       return { 
         isMatch: isHighConfidence, 
@@ -199,6 +207,7 @@ const SearchYourImagePage = () => {
       return;
     }
 
+    searchCancelled.current = false;
     setIsSearching(true);
     setSearchAttempted(true);
     setError('');
@@ -220,6 +229,7 @@ const SearchYourImagePage = () => {
     let facesDetected = 0;
 
     try {
+      if (useAdvancedDetector && !faceapi.nets.ssdMobilenetv1.isLoaded) await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
       const detectorOptions = getDetectorOptions();
       
       // Enhanced user image validation
@@ -279,6 +289,7 @@ const SearchYourImagePage = () => {
       const batchSize = navigator.hardwareConcurrency > 4 ? 6 : 3; // Reduced for more careful processing
       
       for (let i = 0; i < allImages.length; i += batchSize) {
+        if (searchCancelled.current) return;
         const batch = allImages.slice(i, i + batchSize);
         
         // Process batch with improved error handling
@@ -344,7 +355,7 @@ const SearchYourImagePage = () => {
             }
             
             // Only add if we found a high-confidence match
-            if (bestMatchForImage && highestConfidence > 0.65) {
+            if (bestMatchForImage) {
               foundMatches.set(imageData.url, bestMatchForImage);
             }
             
@@ -371,7 +382,7 @@ const SearchYourImagePage = () => {
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 20); // Limit to top 20 most confident matches
       
-      setResults(sortedMatches);
+      if (!searchCancelled.current) setResults(sortedMatches);
 
     } catch (e) {
       console.error("An error occurred during the search process:", e);
@@ -401,13 +412,14 @@ const SearchYourImagePage = () => {
         <main className="container mx-auto px-6 py-16">
           <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
             
-            {!modelsLoaded && (
+            {!modelsLoaded && !modelError && (
               <div className="text-center p-8 border-2 border-dashed rounded-lg">
                 <LoadingSpinner text="Loading enhanced AI models..." />
                 <p className="text-sm text-gray-500 mt-4">Loading multiple detection models for better accuracy.</p>
               </div>
             )}
             
+            {modelError && <div role="alert" className="text-center text-red-700"><p>Face models could not be loaded. Check your connection and try again.</p><button onClick={() => setModelAttempt(previous => previous + 1)} className="underline mt-3">Retry loading models</button></div>}
             {modelsLoaded && (
               <div className="grid md:grid-cols-2 gap-8 items-start">
                 {/* Upload Section */}
@@ -418,6 +430,7 @@ const SearchYourImagePage = () => {
                     onClick={() => imageInputRef.current?.click()}
                   >
                     <input
+                      disabled={isSearching}
                       type="file"
                       ref={imageInputRef}
                       onChange={handleImageUpload}
@@ -500,7 +513,7 @@ const SearchYourImagePage = () => {
                   <ul className="space-y-3 text-sm text-gray-600">
                     <li className="flex items-start">
                       <span className="text-green-500 mr-2">✓</span>
-                      <span><strong>High-precision matching:</strong> Only shows 65%+ confidence matches to eliminate false positives</span>
+                      <span><strong>High-precision matching:</strong> Uses the sensitivity you select to filter similar faces</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-green-500 mr-2">✓</span>
@@ -508,7 +521,7 @@ const SearchYourImagePage = () => {
                     </li>
                     <li className="flex items-start">
                       <span className="text-green-500 mr-2">✓</span>
-                      <span><strong>Confidence scoring:</strong> Each result shows match confidence percentage</span>
+                      <span><strong>Confidence scoring:</strong> Each result shows a similarity score, not a probability of identity</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-green-500 mr-2">✓</span>
@@ -598,7 +611,7 @@ const SearchYourImagePage = () => {
                       Found {results.length} high-confidence photo{results.length !== 1 ? 's' : ''} with your face!
                     </p>
                     <p className="text-sm text-green-600 mt-1">
-                      Showing only matches with 65%+ confidence
+                      Review the suggested matches; results may include similar-looking faces
                     </p>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -614,7 +627,7 @@ const SearchYourImagePage = () => {
                             <div className="text-white opacity-0 group-hover:opacity-100 text-center">
                               <div className="font-bold">View Source</div>
                               <div className="text-sm capitalize">{result.source}</div>
-                              <div className="text-xs mt-1">Confidence: {Math.round(result.confidence * 100)}%</div>
+                              <div className="text-xs mt-1">Similarity: {Math.round(result.confidence * 100)}%</div>
                             </div>
                           </div>
                         </div>

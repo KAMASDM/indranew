@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
+const projectRoot = new URL('.', import.meta.url).pathname;
 const nextConfig = {
+  distDir: process.env.INDRA_TEST === "1" ? ".next-test" : ".next",
+  turbopack: { root: decodeURIComponent(projectRoot) },
+  outputFileTracingRoot: decodeURIComponent(projectRoot),
   images: {
     remotePatterns: [
       {
@@ -16,7 +20,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'via.pplacehold.co',
+        hostname: 'placehold.co',
         port: '',
         pathname: '/**',
       },

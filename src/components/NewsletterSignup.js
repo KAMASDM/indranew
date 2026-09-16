@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { subscribeToNewsletter } from '@/lib/newsletter';
 import LoadingSpinner from './LoadingSpinner';
 
 const NewsletterSignup = ({ 
@@ -46,20 +47,6 @@ const NewsletterSignup = ({
     return emailRegex.test(email);
   }, []);
 
-  const checkExistingSubscriber = useCallback(async (email) => {
-    try {
-      const q = query(
-        collection(db, 'newsletterSubscribers'),
-        where('email', '==', email.toLowerCase())
-      );
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
-    } catch (error) {
-      console.error('Error checking existing subscriber:', error);
-      return false;
-    }
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -77,28 +64,8 @@ const NewsletterSignup = ({
     setError('');
     
     try {
-      // Check if email already exists
-      const isExistingSubscriber = await checkExistingSubscriber(email);
-      
-      if (isExistingSubscriber) {
-        setError('This email is already subscribed to our newsletter');
-        setLoading(false);
-        return;
-      }
+      await subscribeToNewsletter(email, 'newsletter_signup');
 
-      // Add new subscriber
-      await addDoc(collection(db, 'newsletterSubscribers'), {
-        email: email.trim().toLowerCase(),
-        subscribedAt: serverTimestamp(),
-        source: 'newsletter_signup',
-        status: 'active',
-        preferences: {
-          monthly_updates: true,
-          event_invites: true,
-          impact_stories: true
-        }
-      });
-      
       setSubscribed(true);
       setEmail('');
       

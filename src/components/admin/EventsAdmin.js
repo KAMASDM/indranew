@@ -1,10 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { downloadCsv, formatDate } from '@/lib/data.mjs';
+import { deleteImages } from '@/lib/media';
+import EventDetailsEditor from './EventDetailsEditor';
 import LoadingSpinner from '../LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 
 function FormField({ label, name, type = 'text', value, onChange, required = false, placeholder = '', rows = 3, error }) {
   return (
@@ -79,6 +82,7 @@ function EventListItem({ eventData, onDelete, loadingDelete, onImagesAdded }) {
   const [newImages, setNewImages] = useState([]);
   const [preview, setPreview] = useState([]);
   const [uploading, setUploading] = useState(false);
+  useEffect(() => () => preview.forEach(url => URL.revokeObjectURL(url)), [preview]);
   const [error, setError] = useState('');
 
   const handleFileChange = (e) => {
@@ -121,13 +125,8 @@ function EventListItem({ eventData, onDelete, loadingDelete, onImagesAdded }) {
   const handleDeleteImage = async (img) => {
     if (!window.confirm('Delete this image?')) return;
     try {
-      try {
-        const imageRef = ref(storage, img.url);
-        await deleteObject(imageRef);
-      } catch (err) {
-        console.warn('Could not delete image from storage:', err);
-      }
-      
+      await deleteImages([img.url]);
+
       const eventDoc = doc(db, 'events', eventData.id);
       const prevImages = Array.isArray(eventData.images) ? eventData.images : [];
       const updatedImages = prevImages.filter(i => i.url !== img.url);
@@ -151,7 +150,7 @@ function EventListItem({ eventData, onDelete, loadingDelete, onImagesAdded }) {
               <div>
                 <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{eventData.name}</h3>
                 <p className="text-sm text-gray-500 font-medium">
-                  📅 {eventData.startDate ? new Date(eventData.startDate).toLocaleDateString() : (eventData.date ? new Date(eventData.date).toLocaleDateString() : 'No date')}
+                  📅 {eventData.startDate ? formatDate(eventData.startDate) : (eventData.date ? formatDate(eventData.date) : 'No date')}
                 </p>
               </div>
             </div>
@@ -169,6 +168,7 @@ function EventListItem({ eventData, onDelete, loadingDelete, onImagesAdded }) {
             </button>
             <button
               onClick={onDelete}
+              aria-label="Delete Event"
               className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
               disabled={loadingDelete}
             >
@@ -208,7 +208,8 @@ function EventListItem({ eventData, onDelete, loadingDelete, onImagesAdded }) {
         )}
 
         {/* Add Images Section */}
-        {showAddImages && (
+        <EventDetailsEditor event={eventData} onSaved={onImagesAdded} />
+      {showAddImages && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border-2 border-blue-100">
             <h4 className="text-sm font-semibold text-gray-800 mb-4 flex items-center">
               📤 Upload New Images
@@ -269,6 +270,7 @@ export default function EventsAdmin({ events, fetchAllData }) {
   });
   const [files, setFiles] = useState({ eventImages: [] });
   const [showPreview, setShowPreview] = useState({ eventImages: [] });
+  useEffect(() => () => showPreview.eventImages.forEach(url => URL.revokeObjectURL(url)), [showPreview]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState({ event: false, delete: false });
 
@@ -293,6 +295,7 @@ export default function EventsAdmin({ events, fetchAllData }) {
     if (!formData.eventName.trim()) newErrors.eventName = 'Event name is required';
     if (!formData.eventStartDate) newErrors.eventStartDate = 'Start date is required';
     if (!formData.eventEndDate) newErrors.eventEndDate = 'End date is required';
+    else if (formData.eventEndDate < formData.eventStartDate) newErrors.eventEndDate = 'End date must be on or after the start date';
     if (!formData.eventDescription.trim()) newErrors.eventDescription = 'Event description is required';
     if (!formData.eventMapUrl.trim()) newErrors.eventMapUrl = 'Google Map URL is required';
     if (!files.eventImages || files.eventImages.length === 0) newErrors.eventImages = 'At least one event image is required';
@@ -460,7 +463,7 @@ export default function EventsAdmin({ events, fetchAllData }) {
                 <p className="text-blue-700 mt-1">Manage your community events</p>
               </div>
               <button
-                onClick={() => alert('Export CSV functionality can be implemented here')}
+                onClick={() => downloadCsv('events.csv', [['Event', 'Start', 'End', 'Description', 'Map'], ...events.map(event => [event.name, formatDate(event.startDate), formatDate(event.endDate), event.description, event.mapUrl])])}
                 className="px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors font-medium shadow-md hover:shadow-lg"
               >
                 📊 Export CSV
@@ -476,7 +479,8 @@ export default function EventsAdmin({ events, fetchAllData }) {
                   onDelete={() => {
                     if (window.confirm('Are you sure you want to delete this event?')) {
                       setLoading(prev => ({ ...prev, delete: true }));
-                      deleteDoc(doc(db, 'events', eventData.id))
+                      deleteImages(eventData.images || eventData.imageUrl)
+                        .then(() => deleteDoc(doc(db, 'events', eventData.id)))
                         .then(() => {
                           if (fetchAllData) fetchAllData();
                         })

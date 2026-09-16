@@ -1,8 +1,6 @@
 // Enhanced src/app/contact/page.js
 'use client';
-import { useState, useCallback, useRef } from 'react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -22,6 +20,11 @@ const ContactPage = () => {
   const [errors, setErrors] = useState({});
   const [focusedField, setFocusedField] = useState(null);
   const formRef = useRef(null);
+
+  useEffect(() => {
+    const subject = new URLSearchParams(window.location.search).get('subject');
+    if (subject) setFormData(previous => ({ ...previous, subject }));
+  }, []);
 
   const inquiryTypes = [
     { value: 'general', label: 'General Inquiry', icon: '💬' },
@@ -81,7 +84,7 @@ const ContactPage = () => {
       ],
       action: {
         text: 'Send Email',
-        href: 'mailto:contact@indraprasth.org'
+        href: 'mailto:contact@indraprasthfoundation.org'
       }
     },
     {
@@ -97,8 +100,8 @@ const ContactPage = () => {
         'Stay updated with our work'
       ],
       action: {
-        text: 'Follow Us',
-        href: '#'
+        text: 'Ask for Social Links',
+        href: '/contact?subject=Social%20media%20links'
       }
     }
   ];
@@ -144,7 +147,7 @@ const ContactPage = () => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   }, [formData]);
 
   const handleChange = useCallback((e) => {
@@ -160,9 +163,10 @@ const ContactPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length) {
       // Focus on first error field
-      const firstErrorField = Object.keys(errors)[0];
+      const firstErrorField = Object.keys(validationErrors)[0];
       const errorElement = formRef.current?.querySelector(`[name="${firstErrorField}"]`);
       if (errorElement) {
         errorElement.focus();
@@ -206,7 +210,6 @@ const ContactPage = () => {
   if (submitted) {
     return (
       <div className="bg-white min-h-screen">
-        <Navbar />
         <div className="pt-20 min-h-screen flex items-center justify-center px-4">
           <div className="max-w-md mx-auto text-center">
             <div className="bg-green-50 border border-green-200 rounded-2xl p-8 shadow-lg">
@@ -236,14 +239,12 @@ const ContactPage = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
         <header className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white relative overflow-hidden">
@@ -466,7 +467,6 @@ const ContactPage = () => {
           </div>
         </main>
       </div>
-      <Footer />
     </div>
   );
 };

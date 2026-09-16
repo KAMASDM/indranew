@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:e2e": "npx --yes --package firebase-tools firebase emulators:exec --only firestore,storage --project demo-indra --config tests/firebase.json \"npm run test:browser\""
   },
   "dependencies": {
     "@tailwindcss/forms": "^0.5.10",
@@ -14,16 +17,22 @@
     "face-api.js": "^0.22.2",
     "firebase": "^12.2.1",
     "marked": "^16.2.1",
-    "next": "15.5.2",
+    "next": "15.5.25",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "sanitize-html": "^2.17.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "15.5.2",
+    "eslint-config-next": "15.5.25",
     "tailwindcss": "^4"
+  },
+  "overrides": {
+    "node-fetch": "^2.7.0",
+    "postcss": "^8.5.28"
   }
 }

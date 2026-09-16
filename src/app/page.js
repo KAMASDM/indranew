@@ -1,46 +1,25 @@
 // Enhanced Mobile-First Homepage with Bottom Navigation
 'use client';
+import { toDate } from '@/lib/data.mjs';
 import { useEffect, useState } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
-import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Testimonials from '../components/Testimonials';
-import Footer from '../components/Footer';
 import ImpactStats from '../components/ImpactStats';
 import BackToTop from '../components/BackToTop';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 import ganesh from '../../src/img/ganesh.jpeg';
 // Local fallback images
 const FALLBACK_IMAGES = {
-  food: '/images/fallbacks/food-security.jpg',
-  education: '/images/fallbacks/education.jpg',
-  basicNeeds: '/images/fallbacks/basic-needs.jpg',
-  environment: '/images/fallbacks/environment.jpg',
-  default: '/images/fallbacks/default.jpg'
+  food: '/image-placeholder.svg',
+  education: '/image-placeholder.svg',
+  basicNeeds: '/image-placeholder.svg',
+  environment: '/image-placeholder.svg',
+  default: '/image-placeholder.svg'
 };
-
-const HomePage = () => {
-  const [initiatives, setInitiatives] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [gallery, setGallery] = useState([]);
-  const [testimonials, setTestimonials] = useState([]);
-  const [heroImages, setHeroImages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeInitiative, setActiveInitiative] = useState(0);
-  const [showStoryModal, setShowStoryModal] = useState(false);
-  const [storyForm, setStoryForm] = useState({ name: '', email: '', story: '' });
-  const [storySubmitting, setStorySubmitting] = useState(false);
-  const [storySuccess, setStorySuccess] = useState(false);
-  const [storyError, setStoryError] = useState('');
-  const [eventError, setEventError] = useState(null);
-  const [galleryError, setGalleryError] = useState(null);
-  const [galleryImageStates, setGalleryImageStates] = useState({});
-  const [galleryImageErrors, setGalleryImageErrors] = useState({});
-  const [expandedCards, setExpandedCards] = useState({});
-  const [showMobileNav, setShowMobileNav] = useState(false);
 
 // Default initiatives with proper fallbacks
 const defaultInitiatives = [
@@ -86,6 +65,25 @@ const defaultInitiatives = [
   },
 ];
 
+
+const HomePage = () => {
+  const [initiatives, setInitiatives] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [gallery, setGallery] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeInitiative, setActiveInitiative] = useState(0);
+  const [showStoryModal, setShowStoryModal] = useState(false);
+  const [storyForm, setStoryForm] = useState({ name: '', email: '', story: '' });
+  const [storySubmitting, setStorySubmitting] = useState(false);
+  const [storySuccess, setStorySuccess] = useState(false);
+  const [storyError, setStoryError] = useState('');
+  const [eventError, setEventError] = useState(null);
+  const [galleryError, setGalleryError] = useState(null);
+  const [galleryImageStates, setGalleryImageStates] = useState({});
+  const [galleryImageErrors, setGalleryImageErrors] = useState({});
+  const [expandedCards, setExpandedCards] = useState({});
+
   const features = [
     {
       title: "100% Transparency",
@@ -111,15 +109,6 @@ const defaultInitiatives = [
       icon: "🏠",
       color: "purple"
     }
-  ];
-
-  // Mobile bottom navigation items
-  const bottomNavItems = [
-    { name: 'Home', href: '/', icon: '🏠', active: true },
-    { name: 'Initiatives', href: '/initiatives', icon: '💡' },
-    { name: 'Events', href: '/events', icon: '📅' },
-    { name: 'Donate', href: '/donate', icon: '❤️' },
-    { name: 'Contact', href: '/contact', icon: '📞' }
   ];
 
   // Text truncation function
@@ -198,7 +187,7 @@ const defaultInitiatives = [
           const eventsData = eventsSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
-            startDate: doc.data().startDate ? new Date(doc.data().startDate) : null
+            startDate: doc.data().startDate ? toDate(doc.data().startDate) : null
           }));
           setEvents(eventsData);
           setEventError(null);
@@ -293,28 +282,7 @@ const defaultInitiatives = [
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
-      <Navbar />
       
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-        <div className="grid grid-cols-5 h-16">
-          {bottomNavItems.map((item, index) => (
-            <Link
-              key={index}
-              href={item.href}
-              className={`flex flex-col items-center justify-center text-xs transition-colors duration-200 ${
-                item.active 
-                  ? 'text-blue-600 bg-blue-50' 
-                  : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-              }`}
-            >
-              <span className="text-xl mb-1">{item.icon}</span>
-              <span className="font-medium">{item.name}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       <main className="pt-16">
         <Hero />
         <ImpactStats />
@@ -567,7 +535,7 @@ const defaultInitiatives = [
                     {/* Event Image */}
                     <div className="relative h-56 lg:h-64 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
                       <Image
-                        src={event.imageUrl || event.image?.url || event.bannerImage || ganesh}
+                        src={event.images?.[0]?.url || event.imageUrl || event.image?.url || event.bannerImage || ganesh}
                         alt={`${event.name || 'Community Event'} event`}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500 rounded-t-2xl border-b-4 border-blue-200"
@@ -911,9 +879,15 @@ const defaultInitiatives = [
           </div>
         </section>
 
+        <section className="py-12 px-6 text-center bg-teal-50">
+          {testimonials.length > 0 && <Testimonials customTestimonials={testimonials} />}
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Share your experience</h2>
+          <p className="text-gray-700 mb-4">Tell the foundation how its work has touched your life.</p>
+          <button onClick={() => { setStoryError(''); setStorySuccess(false); setShowStoryModal(true); }} className="bg-teal-700 text-white px-6 py-3 rounded-lg">Share Your Story</button>
+        </section>
         {/* Share Your Story Modal */}
         {showStoryModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
+          <div role="dialog" aria-modal="true" aria-label="Share Your Story" className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
             <div className="bg-white rounded-lg shadow-2xl p-6 lg:p-8 max-w-2xl w-full relative max-h-[90vh] overflow-y-auto">
               <button
                 className="absolute top-4 right-4 lg:top-6 lg:right-6 text-gray-400 hover:text-gray-600 text-2xl"
@@ -999,8 +973,6 @@ const defaultInitiatives = [
           </div>
         )}
       </main>
-
-      <Footer />
       <BackToTop />
     </div>
   );

@@ -1,12 +1,10 @@
 // Enhanced src/app/volunteer/page.js
 'use client';
 import { useState, useCallback, useRef } from 'react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 const VolunteerPage = () => {
@@ -93,21 +91,21 @@ const VolunteerPage = () => {
       name: 'Priya Sharma',
       role: 'Teaching Volunteer',
       quote: 'Volunteering with Indraprasth Foundation has been incredibly fulfilling. Seeing children learn and grow brings so much joy.',
-      image: '/volunteer-1.jpg',
+      image: '/image-placeholder.svg',
       duration: '2 years'
     },
     {
       name: 'Raj Patel',
       role: 'Kitchen Volunteer',
       quote: 'Being part of the Rasodu initiative has taught me the true meaning of service. Every meal we serve makes a difference.',
-      image: '/volunteer-2.jpg',
+      image: '/image-placeholder.svg',
       duration: '3 years'
     },
     {
       name: 'Anita Desai',
       role: 'Event Coordinator',
       quote: 'The foundation has given me a platform to use my organizational skills for a great cause. The team is amazing!',
-      image: '/volunteer-3.jpg',
+      image: '/image-placeholder.svg',
       duration: '1 year'
     }
   ];
@@ -201,7 +199,9 @@ const VolunteerPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateStep(3)) return;
+    for (const step of [1, 2, 3]) {
+      if (!validateStep(step)) { setCurrentStep(step); return; }
+    }
 
     setLoading(true);
     
@@ -231,7 +231,6 @@ const VolunteerPage = () => {
   if (submitted) {
     return (
       <div className="bg-gray-50 min-h-screen">
-        <Navbar />
         <div className="pt-20 min-h-screen flex items-center justify-center px-4">
           <div className="max-w-2xl mx-auto text-center">
             <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-12">
@@ -299,14 +298,12 @@ const VolunteerPage = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
         <header className="bg-orange-100 text-gray-800 relative overflow-hidden">
@@ -667,7 +664,6 @@ const VolunteerPage = () => {
           </section>
         </main>
       </div>
-      <Footer />
     </div>
   );
 };

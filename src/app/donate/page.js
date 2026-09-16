@@ -1,9 +1,9 @@
 // Enhanced src/app/donate/page.js
 'use client';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { useState } from 'react';
+import Image from '@/components/SafeImage';
+import DonationPayment from '@/components/DonationPayment';
+import { donationAmount } from '@/lib/data.mjs';
 import ImpactStats from '../../components/ImpactStats';
 import IndraQR from '../../../src/img/indra-qr.png';
 
@@ -13,7 +13,12 @@ const DonatePage = () => {
   const [customAmount, setCustomAmount] = useState('');
   const [donationType, setDonationType] = useState('one-time');
   const [selectedCause, setSelectedCause] = useState('general');
-  const [showQR, setShowQR] = useState(false);
+  const [amountError, setAmountError] = useState('');
+  const amount = donationAmount(customAmount !== '' ? customAmount : selectedAmount);
+  const goToTab = tab => {
+    if (tab !== 'amount' && !amount) { setAmountError('Enter an amount from ₹1 to ₹1,00,00,000 with up to two decimal places.'); setActiveTab('amount'); return; }
+    setAmountError(''); setActiveTab(tab);
+  };
   const [activeTab, setActiveTab] = useState('amount');
 
   const donationAmounts = [50, 100, 250, 500, 1000, 2500, 5000];
@@ -109,35 +114,10 @@ const DonatePage = () => {
     }
   ];
 
-  useEffect(() => {
-    // Set initial amount based on selected preset or custom
-    if (customAmount) {
-      setSelectedAmount(parseInt(customAmount) || 0);
-    }
-  }, [customAmount]);
-
-  const getCurrentImpact = () => {
-    const amount = customAmount ? parseInt(customAmount) : selectedAmount;
-    const example = impactExamples.find(ex => ex.amount === amount) || 
-                   { amount, impact: `${amount} meals for those in need` };
-    return example;
-  };
-
-  const handleDonate = () => {
-    setShowQR(true);
-    // Track donation intent
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'donate_intent', {
-        value: selectedAmount,
-        currency: 'INR',
-        cause: selectedCause
-      });
-    }
-  };
+  const getCurrentImpact = () => impactExamples.find(example => example.amount === amount) || { amount: amount || 0, impact: 'Support community programs' };
 
   return (
     <div className="bg-white min-h-screen">
-      <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 text-white relative overflow-hidden">
@@ -228,7 +208,7 @@ const DonatePage = () => {
                       ].map(tab => (
                         <button
                           key={tab.id}
-                          onClick={() => setActiveTab(tab.id)}
+                          onClick={() => goToTab(tab.id)}
                           className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 font-medium border-b-2 transition-colors duration-200 ${
                             activeTab === tab.id
                               ? 'border-orange-500 text-orange-600'
@@ -242,9 +222,13 @@ const DonatePage = () => {
                     </div>
 
                     {/* Step 1: Amount Selection */}
-                    {/* Step 1: Donation Type Selection (No Amount) */}
                     {activeTab === 'amount' && (
                       <div className="space-y-8">
+                        <fieldset><legend className="font-semibold text-gray-900 mb-3">Donation amount (INR)</legend>
+                          <div className="flex flex-wrap gap-2 mb-4">{donationAmounts.map(preset => <button key={preset} type="button" aria-pressed={customAmount === '' && selectedAmount === preset} onClick={() => { setSelectedAmount(preset); setCustomAmount(''); setAmountError(''); }} className={`px-4 py-2 rounded-lg border ${customAmount === '' && selectedAmount === preset ? 'bg-orange-600 text-white' : 'text-gray-900 bg-white'}`}>₹{preset}</button>)}</div>
+                          <label className="block text-gray-800">Custom amount<input type="number" min="1" max="10000000" step="0.01" value={customAmount} onChange={e => setCustomAmount(e.target.value)} className="block w-full border rounded p-3 bg-white text-gray-900" placeholder="Enter amount in rupees" /></label>
+                          {amountError && <p role="alert" className="text-red-700 mt-2">{amountError}</p>}
+                        </fieldset>
                         <div>
                           <h3 className="text-lg font-semibold text-orange-700 mb-4">Donation Type</h3>
                           <div className="grid grid-cols-2 gap-4">
@@ -273,14 +257,14 @@ const DonatePage = () => {
                               <div className="text-center w-full">
                                 <div className="text-2xl mb-2">📅</div>
                                 <div className="font-semibold text-orange-700">Monthly</div>
-                                <div className="text-sm text-orange-600">Recurring donation</div>
+                                <div className="text-sm text-orange-600">Pay manually each month</div>
                               </div>
                             </label>
                           </div>
                         </div>
                         <div className="flex justify-end">
                           <button
-                            onClick={() => setActiveTab('cause')}
+                            onClick={() => goToTab('cause')}
                             className="bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors duration-300"
                           >
                             Continue to Cause Selection
@@ -323,13 +307,13 @@ const DonatePage = () => {
                         </div>
                         <div className="flex justify-between">
                           <button
-                            onClick={() => setActiveTab('amount')}
+                            onClick={() => goToTab('amount')}
                             className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors duration-300"
                           >
                             Back to Amount
                           </button>
                           <button
-                            onClick={() => setActiveTab('payment')}
+                            onClick={() => goToTab('payment')}
                             className="bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors duration-300"
                           >
                             Continue to Payment
@@ -343,6 +327,7 @@ const DonatePage = () => {
                       <div className="space-y-8">
                         <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg p-6 border-2 border-orange-200 shadow-md">
                           <h3 className="text-lg font-semibold text-orange-800 mb-4">Donation Summary</h3>
+                          <p className="text-gray-900 font-bold mb-3">Amount: ₹{amount}</p>
                           <div className="space-y-2">
                             <div className="flex justify-between">
                               <span className="text-orange-800">Type:</span>
@@ -374,44 +359,21 @@ const DonatePage = () => {
                               height={250} 
                               className="mx-auto rounded-lg shadow-lg"
                             />
+                            <a href={IndraQR.src} download="indraprasth-donation-qr.png" className="block mt-4 text-teal-800 underline">Save QR code</a>
                            
                           </div>
 
-                          <div className="mt-6 text-sm text-gray-600">
-                            <p className="mb-2">After payment, you will receive:</p>
-                            <ul className="text-left max-w-md mx-auto space-y-1">
-                              <li className="flex items-center">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                                Payment confirmation receipt
-                              </li>
-                              <li className="flex items-center">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                                80G tax exemption certificate
-                              </li>
-                              <li className="flex items-center">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                                Impact updates via email
-                              </li>
-                            </ul>
-                          </div>
+                          <DonationPayment amount={amount} cause={selectedCause} frequency={donationType} />
                         </div>
 
                         <div className="flex justify-between">
                           <button
-                            onClick={() => setActiveTab('cause')}
+                            onClick={() => goToTab('cause')}
                             className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors duration-300"
                           >
                             Back to Cause
                           </button>
-                          <button
-                            onClick={() => {
-                              alert('Thank you for your donation! Please scan the QR code to complete the payment.');
-                            }}
-                            className="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors duration-300 flex items-center"
-                          >
-                            <span className="mr-2">✓</span>
-                            Complete Donation
-                          </button>
+
                         </div>
                       </div>
                     )}
@@ -517,15 +479,15 @@ const DonatePage = () => {
               {[
                 {
                   question: 'How do I get my 80G tax exemption certificate?',
-                  answer: 'We provide 80G certificates for all donations. You will receive it via email within 7 working days of your donation.'
+                  answer: 'We provide 80G certificates for all donations. Contact the foundation after your payment is verified to request your certificate.'
                 },
                 {
                   question: 'How can I track the impact of my donation?',
-                  answer: 'We send monthly impact reports to all donors showing exactly how funds are being utilized and the lives being impacted.'
+                  answer: 'Contact the foundation with your payment reference to request an update on how your donation is used.'
                 },
                 {
                   question: 'Is my donation secure?',
-                  answer: 'Yes, we use secure payment gateways and all transactions are encrypted. Your financial information is completely safe.'
+                  answer: 'Payments are completed in your UPI app. Check the recipient shown in your app before paying, then submit your transaction reference here for manual verification.'
                 },
                 {
                   question: 'Can I donate in memory of someone?',
@@ -541,7 +503,6 @@ const DonatePage = () => {
           </div>
         </section>
       </div>
-      <Footer />
     </div>
   );
 };

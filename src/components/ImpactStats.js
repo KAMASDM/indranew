@@ -1,5 +1,6 @@
 // Enhanced src/components/ImpactStats.js - Redesigned with Modern & Professional CSS
 'use client';
+import { animationValue } from '@/lib/data.mjs';
 import { useEffect, useState, useRef } from 'react';
 
 const ImpactStats = ({ variant = 'default', showAnimation = true, customStats = null }) => {
@@ -46,24 +47,12 @@ const ImpactStats = ({ variant = 'default', showAnimation = true, customStats = 
     if (!isVisible) return;
 
     const duration = 2500;
-    const frameRate = 16;
-    const totalFrames = duration / frameRate;
-
+    const startedAt = performance.now();
     const timer = setInterval(() => {
-      setStats(prevStats => {
-        const newStats = prevStats.map(stat => {
-          const increment = stat.target / totalFrames;
-          const newValue = Math.min(stat.value + increment, stat.target);
-          return { ...stat, value: Math.round(newValue) };
-        });
-
-        if (newStats.every(s => s.value >= s.target)) {
-          clearInterval(timer);
-          return newStats.map(s => ({...s, value: s.target}));
-        }
-        return newStats;
-      });
-    }, frameRate);
+      const progress = Math.min((performance.now() - startedAt) / duration, 1);
+      setStats(previous => previous.map(stat => ({ ...stat, value: animationValue(stat.target, progress) })));
+      if (progress === 1) clearInterval(timer);
+    }, 16);
 
     return () => clearInterval(timer);
   }, [isVisible, showAnimation]);

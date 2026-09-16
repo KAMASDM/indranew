@@ -1,10 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { toDate, formatDate, formatTime, downloadCsv } from '@/lib/data.mjs';
+import { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
-import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { deleteImages } from '@/lib/media';
 import LoadingSpinner from '../LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 
 function FormField({ label, value, onChange }) {
   return (
@@ -47,6 +49,8 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
   const [files, setFiles] = useState([]);
   const [showPreview, setShowPreview] = useState([]);
   const [galleryCaption, setGalleryCaption] = useState('');
+  const [category, setCategory] = useState('general');
+  useEffect(() => () => showPreview.forEach(url => URL.revokeObjectURL(url)), [showPreview]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState({ gallery: false, delete: false });
   const [dragActive, setDragActive] = useState(false);
@@ -55,28 +59,28 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
   const [editModal, setEditModal] = useState({ open: false, image: null, caption: '' });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  useEffect(() => setPage(1), [search, dateFrom, dateTo]);
   const pageSize = 8;
   const filteredImages = galleryImages.filter(img => {
-    const matchesSearch = img.caption?.toLowerCase().includes(search.toLowerCase()) || img.fileName?.toLowerCase().includes(search.toLowerCase());
-    const imgDate = img.uploadedAt ? new Date(img.uploadedAt) : null;
+    const matchesSearch = !search || img.caption?.toLowerCase().includes(search.toLowerCase()) || img.fileName?.toLowerCase().includes(search.toLowerCase());
+    const imgDate = img.uploadedAt ? toDate(img.uploadedAt) : null;
     const fromDate = dateFrom ? new Date(dateFrom) : null;
-    const toDate = dateTo ? new Date(dateTo) : null;
+    const endDate = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
     let matchesDate = true;
     if (imgDate && fromDate && imgDate < fromDate) matchesDate = false;
-    if (imgDate && toDate && imgDate > toDate) matchesDate = false;
+    if (imgDate && endDate && imgDate > endDate) matchesDate = false;
     return matchesSearch && matchesDate;
   });
   const totalPages = Math.max(1, Math.ceil(filteredImages.length / pageSize));
-  const paginatedImages = filteredImages.slice((page - 1) * pageSize, page * pageSize);
+  const currentPage = Math.min(page, totalPages);
+  const paginatedImages = filteredImages.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleEditCaption = async () => {
     if (!editModal.image) return;
     setEditModal(modal => ({ ...modal, saving: true }));
     try {
-      await fetch(`/api/gallery/${editModal.image.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caption: editModal.caption })
+      await updateDoc(doc(db, 'gallery', editModal.image.id), {
+        caption: editModal.caption.trim(), category: editModal.category?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'general'
       });
       setEditModal({ open: false, image: null, caption: '', saving: false });
       if (fetchAllData) fetchAllData();
@@ -95,6 +99,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
     const selectedFiles = Array.from(fileList).filter(file =>
       validTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
     );
+    setErrors(previous => ({ ...previous, gallery: selectedFiles.length !== fileList.length ? 'Some files were skipped. Use JPEG, PNG or WebP images up to 5 MB.' : '' }));
     setFiles(selectedFiles);
     setShowPreview(selectedFiles.map(file => URL.createObjectURL(file)));
   };
@@ -120,7 +125,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
 
   const handleGalleryImageUpload = async (e) => {
     e.preventDefault();
-    if (!files.length) return;
+    if (!files.length) { setErrors(previous => ({ ...previous, gallery: 'Select at least one image to upload.' })); return; }
     setLoading(prev => ({ ...prev, gallery: true }));
     try {
       await Promise.all(files.map(async (file) => {
@@ -133,6 +138,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
           size: file.size,
           uploadedAt: new Date().toISOString(),
           caption: galleryCaption.trim() || '',
+          category: category.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'general',
         });
       }));
       setFiles([]);
@@ -150,16 +156,9 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
   const handleDelete = (id, url) => {
     if (!window.confirm('Are you sure you want to delete this image?')) return;
     setLoading(prev => ({ ...prev, delete: true }));
-    deleteDoc(doc(db, 'gallery', id))
-      .then(async () => {
-        try {
-          const imageRef = ref(storage, url);
-          await deleteObject(imageRef);
-        } catch (err) {
-          console.warn('Could not delete image from storage:', err);
-        }
-        if (fetchAllData) fetchAllData();
-      })
+    deleteImages([url])
+      .then(() => deleteDoc(doc(db, 'gallery', id)))
+      .then(() => { if (fetchAllData) fetchAllData(); })
       .catch(err => {
         alert('Failed to delete image.');
         console.error(err);
@@ -172,7 +171,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
       {/* Upload Section */}
       <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-white rounded-3xl shadow-2xl border-2 border-blue-100 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
-          <h2 className="text-2xl font-extrabold text-indigo-600 flex items-center">
+          <h2 className="text-2xl font-extrabold text-white flex items-center">
             <span className="mr-3">🖼️</span>
             Upload to Gallery
           </h2>
@@ -180,6 +179,8 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
         </div>
         <div className="p-8">
           <form onSubmit={handleGalleryImageUpload} className="space-y-6">
+              <label className="block text-gray-800">Category<input value={category} onChange={e => setCategory(e.target.value)} className="block w-full border rounded p-3 bg-white text-gray-900" placeholder="general" /></label>
+
             <div className="space-y-4">
               <label className="block text-sm font-semibold text-blue-800">
                 Select Images (multiple files supported)
@@ -242,7 +243,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
               onChange={(e) => setGalleryCaption(e.target.value)}
             />
             
-            <SubmitButton loading={loading.gallery} text="to Gallery" />
+            <SubmitButton loading={loading.gallery} text="Upload to Gallery" />
           </form>
         </div>
       </div>
@@ -310,7 +311,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
                         {loading.delete ? <LoadingSpinner size="sm" color="white" /> : '×'}
                       </button>
                       <button
-                        onClick={() => setEditModal({ open: true, image, caption: image.caption || '' })}
+                        onClick={() => setEditModal({ open: true, image, caption: image.caption || '', category: image.category || 'general' })}
                         className="absolute bottom-3 right-3 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-blue-600"
                         title="Edit caption"
                       >
@@ -322,7 +323,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
                         {image.caption || 'Untitled'}
                       </h4>
                       <p className="text-xs text-blue-700">
-                        {image.uploadedAt ? new Date(image.uploadedAt).toLocaleDateString() : 'No date'}
+                        {image.uploadedAt ? formatDate(image.uploadedAt) : 'No date'}
                       </p>
                       <p className="text-xs text-blue-400 font-mono truncate">
                         {image.fileName}
@@ -342,6 +343,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
               className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl text-blue-900 bg-white focus:outline-none focus:border-blue-400 mb-4"
               placeholder="Enter new caption..."
             />
+            <label className="block text-gray-800 mb-4">Category<input value={editModal.category || "general"} onChange={e => setEditModal(previous => ({ ...previous, category: e.target.value }))} className="block w-full border rounded p-3 bg-white text-gray-900" /></label>
             {editModal.error && <p className="text-red-500 text-sm mb-2">{editModal.error}</p>}
             <div className="flex gap-4 justify-end">
               <button
@@ -372,7 +374,7 @@ export default function GalleryAdmin({ galleryImages, fetchAllData }) {
                 <button
                   className="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 font-bold disabled:opacity-50"
                   disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
                 >
                   Next
                 </button>

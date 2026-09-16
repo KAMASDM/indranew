@@ -1,4 +1,5 @@
 'use client';
+import { toDate, formatDate, formatTime, downloadCsv } from '@/lib/data.mjs';
 import { useState } from 'react';
 import { db } from '../../lib/firebase';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -34,24 +35,10 @@ export default function NewsletterAdmin({ subscribers, fetchAllData }) {
     setLoading(prev => ({ ...prev, export: true }));
     
     try {
-      const csvContent = [
-        ['Email', 'Subscribed Date', 'Subscribed Time'].join(','),
-        ...filteredSubscribers.map(sub => [
-          sub.email,
-          sub.subscribedAt ? new Date(sub.subscribedAt).toLocaleDateString() : 'N/A',
-          sub.subscribedAt ? new Date(sub.subscribedAt).toLocaleTimeString() : 'N/A'
-        ].join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `newsletter-subscribers-${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCsv(`newsletter-subscribers-${new Date().toISOString().slice(0, 10)}.csv`, [
+        ['Email', 'Subscribed Date', 'Subscribed Time'],
+        ...filteredSubscribers.map(sub => [sub.email, formatDate(sub.subscribedAt), formatTime(sub.subscribedAt)])
+      ]);
     } catch (err) {
       alert('Failed to export CSV');
       console.error(err);
@@ -99,7 +86,8 @@ export default function NewsletterAdmin({ subscribers, fetchAllData }) {
 
     subscribers.forEach(sub => {
       if (sub.subscribedAt) {
-        const date = new Date(sub.subscribedAt);
+        const date = toDate(sub.subscribedAt);
+        if (!date) return;
         const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
         if (stats[monthKey] !== undefined) {
           stats[monthKey]++;
@@ -140,7 +128,7 @@ export default function NewsletterAdmin({ subscribers, fetchAllData }) {
               <div className="text-center">
                 <div className="text-3xl font-bold text-teal-600">
                   {subscribers.filter(s => {
-                    const subDate = new Date(s.subscribedAt);
+                    const subDate = toDate(s.subscribedAt);
                     const monthAgo = new Date();
                     monthAgo.setMonth(monthAgo.getMonth() - 1);
                     return subDate > monthAgo;
@@ -151,7 +139,7 @@ export default function NewsletterAdmin({ subscribers, fetchAllData }) {
               <div className="text-center">
                 <div className="text-3xl font-bold text-teal-600">
                   {subscribers.filter(s => {
-                    const subDate = new Date(s.subscribedAt);
+                    const subDate = toDate(s.subscribedAt);
                     const weekAgo = new Date();
                     weekAgo.setDate(weekAgo.getDate() - 7);
                     return subDate > weekAgo;
@@ -277,10 +265,10 @@ export default function NewsletterAdmin({ subscribers, fetchAllData }) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {subscriber.subscribedAt ? new Date(subscriber.subscribedAt).toLocaleDateString() : 'N/A'}
+                          {subscriber.subscribedAt ? formatDate(subscriber.subscribedAt) : 'N/A'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {subscriber.subscribedAt ? new Date(subscriber.subscribedAt).toLocaleTimeString() : ''}
+                          {subscriber.subscribedAt ? formatTime(subscriber.subscribedAt) : ''}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

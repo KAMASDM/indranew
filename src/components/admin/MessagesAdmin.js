@@ -1,4 +1,5 @@
 'use client';
+import { toDate, formatDate, formatTime, downloadCsv } from '@/lib/data.mjs';
 import { useState } from 'react';
 import { db } from '../../lib/firebase';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -8,7 +9,7 @@ export default function MessagesAdmin({ messages, fetchAllData }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState({ delete: false });
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [expanded, setExpanded] = useState({});
 
   const handleDelete = (id) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
@@ -164,20 +165,20 @@ export default function MessagesAdmin({ messages, fetchAllData }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-600 max-w-xs">
-                        <div className="truncate">{message.message}</div>
+                        <div className={expanded[message.id] ? "whitespace-pre-wrap break-words" : "truncate"}>{message.message}</div>
                         {message.message?.length > 100 && (
-                          <button className="text-indigo-600 hover:text-indigo-900 text-xs mt-1 font-medium">
-                            Read more
+                          <button onClick={() => setExpanded(prev => ({ ...prev, [message.id]: !prev[message.id] }))} className="text-indigo-600 hover:text-indigo-900 text-xs mt-1 font-medium">
+                            {expanded[message.id] ? "Show less" : "Read more"}
                           </button>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {message.submittedAt ? new Date(message.submittedAt).toLocaleDateString() : 'N/A'}
+                        {message.submittedAt ? formatDate(message.submittedAt) : 'N/A'}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {message.submittedAt ? new Date(message.submittedAt).toLocaleTimeString() : ''}
+                        {message.submittedAt ? formatTime(message.submittedAt) : ''}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -1,7 +1,7 @@
 // Enhanced src/components/Testimonials.js
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 
 const Testimonials = ({ 
   variant = 'default', 
@@ -24,7 +24,7 @@ const Testimonials = ({
       title: "Daily Wage Worker",
       category: "Community Member",
       location: "Vadodara, Gujarat",
-      image: "/testimonial-ramesh.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "3 years",
       impact: "Receives daily meals"
@@ -36,7 +36,7 @@ const Testimonials = ({
       title: "Regular Donor",
       category: "Donor",
       location: "Mumbai, Maharashtra",
-      image: "/testimonial-sunita.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "2 years",
       impact: "₹5,000 monthly donor"
@@ -48,7 +48,7 @@ const Testimonials = ({
       title: "Software Engineer",
       category: "Volunteer",
       location: "Vadodara, Gujarat",
-      image: "/testimonial-amit.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "1 year",
       impact: "Weekend volunteer"
@@ -60,7 +60,7 @@ const Testimonials = ({
       title: "School Teacher",
       category: "Beneficiary",
       location: "Vadodara, Gujarat",
-      image: "/testimonial-priya.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "6 months",
       impact: "Students benefit from program"
@@ -72,7 +72,7 @@ const Testimonials = ({
       title: "CSR Head, Tech Solutions Ltd",
       category: "Corporate Partner",
       location: "Ahmedabad, Gujarat",
-      image: "/testimonial-rajesh.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "8 months",
       impact: "₹2 lakhs contributed"
@@ -84,7 +84,7 @@ const Testimonials = ({
       title: "Mother of Three",
       category: "Beneficiary",
       location: "Vadodara, Gujarat",
-      image: "/testimonial-meera.jpg",
+      image: "/image-placeholder.svg",
       rating: 5,
       relationship: "2 years",
       impact: "Family of 5 supported"

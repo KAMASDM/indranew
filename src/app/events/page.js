@@ -1,12 +1,11 @@
 // Enhanced src/app/events/page.js
 'use client';
+import { toDate } from '@/lib/data.mjs';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 const EventsPage = () => {
@@ -108,8 +107,8 @@ const EventsPage = () => {
     events.forEach(event => {
       event.images?.forEach(img => {
         if (img.uploadedAt) {
-          const d = typeof img.uploadedAt === 'string' ? new Date(img.uploadedAt) : (img.uploadedAt?.toDate?.() || img.uploadedAt);
-          days.add(d.toISOString().slice(0, 10));
+          const d = toDate(img.uploadedAt);
+          if (d) days.add(d.toISOString().slice(0, 10));
         }
       });
     });
@@ -185,7 +184,6 @@ const EventsPage = () => {
   if (loading) {
     return (
       <div className="bg-orange-100 min-h-screen">
-        <Navbar />
         <div className="pt-20">
           <header className="bg-orange-100 text-indigo-500 text-center py-20">
             <h1 className="text-5xl font-bold text-indigo-500">Our Events</h1>
@@ -196,14 +194,12 @@ const EventsPage = () => {
             <p className="text-indigo-500 mt-4">Loading events...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
         <header className="bg-orange-100 text-indigo-500 relative overflow-hidden">
@@ -357,8 +353,8 @@ const EventsPage = () => {
                 if (imageDayFilter !== 'all') {
                   filteredImages = filteredImages.filter(img => {
                     if (!img.uploadedAt) return false;
-                    const d = typeof img.uploadedAt === 'string' ? new Date(img.uploadedAt) : (img.uploadedAt?.toDate?.() || img.uploadedAt);
-                    return d.toISOString().slice(0, 10) === imageDayFilter;
+                    const d = toDate(img.uploadedAt);
+                    return d?.toISOString().slice(0, 10) === imageDayFilter;
                   });
                 }
                 if (imageMetaFilter !== 'all') {
@@ -506,7 +502,6 @@ const EventsPage = () => {
           )}
         </main>
       </div>
-      <Footer />
     </div>
   );
 };

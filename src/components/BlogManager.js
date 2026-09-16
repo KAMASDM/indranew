@@ -1,10 +1,11 @@
 // BlogManager.js - Admin blog/news management component
 'use client';
+import { dateInput, formatDate, toDate } from '@/lib/data.mjs';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 const MarkdownEditor = dynamic(() => import('./MarkdownEditor'), { ssr: false });
 import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
 
 const initialForm = { title: '', slug: '', excerpt: '', content: '', image: '', category: '', date: '', metaTitle: '', metaDescription: '' };
 
@@ -32,7 +33,8 @@ export default function BlogManager() {
   useEffect(() => { fetchBlogs(); }, []);
 
   const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(previous => ({ ...previous, [name]: value, ...(name === 'title' && !editingId ? { slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') } : {}) }));
   };
   const handleContentChange = value => {
     setForm({ ...form, content: value });
@@ -48,23 +50,27 @@ export default function BlogManager() {
         setLoading(false);
         return;
       }
-      if (editingId) {
-        await updateDoc(doc(db, 'news', editingId), { ...form, date: new Date(form.date) || serverTimestamp() });
-      } else {
-        await addDoc(collection(db, 'news'), { ...form, date: new Date(form.date) || serverTimestamp() });
-      }
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) throw new Error('Use lowercase words separated by hyphens for the slug.');
+      if (form.date && !toDate(form.date)) throw new Error('Enter a valid publication date.');
+      const existing = await getDocs(query(collection(db, 'news'), where('slug', '==', form.slug)));
+      if (existing.docs.some(item => item.id !== editingId)) throw new Error('Another post already uses this slug.');
+      const payload = Object.fromEntries(Object.keys(initialForm).map(key => [key, form[key] || '']));
+      payload.date = form.date ? new Date(`${form.date}T12:00:00Z`) : serverTimestamp();
+      payload.updatedAt = serverTimestamp();
+      if (editingId) await updateDoc(doc(db, 'news', editingId), payload);
+      else await addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() });
       setForm(initialForm);
       setEditingId(null);
       fetchBlogs();
     } catch (err) {
-      setError('Failed to save blog');
+      setError(err.message || 'Failed to save blog');
     } finally {
       setLoading(false);
     }
   };
 
   const handleEdit = blog => {
-    setForm({ ...blog, date: blog.date ? new Date(blog.date).toISOString().slice(0,10) : '' });
+    setForm({ ...blog, date: dateInput(blog.date) });
     setEditingId(blog.id);
   };
 
@@ -117,7 +123,7 @@ export default function BlogManager() {
             <li key={blog.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between">
               <div>
                 <span className="font-bold">{blog.title}</span> <span className="text-gray-400">/ {blog.slug}</span>
-                <div className="text-xs text-gray-500">{blog.category} | {blog.date && new Date(blog.date).toLocaleDateString()}</div>
+                <div className="text-xs text-gray-500">{blog.category} | {blog.date && formatDate(blog.date)}</div>
               </div>
               <div className="mt-2 md:mt-0 flex gap-2">
                 <button className="text-teal-600 underline" onClick={()=>handleEdit(blog)}>Edit</button>

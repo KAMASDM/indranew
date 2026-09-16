@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
 import { collection, addDoc, deleteDoc, doc, getDocs, query, orderBy, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { deleteImages } from '@/lib/media';
 import LoadingSpinner from '../LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 
 export default function HeroAboutAdmin() {
   const [heroImages, setHeroImages] = useState([]);
@@ -19,6 +20,7 @@ export default function HeroAboutAdmin() {
   const [heroFile, setHeroFile] = useState(null);
   const [heroPreview, setHeroPreview] = useState(null);
   const [errors, setErrors] = useState({});
+  useEffect(() => () => { if (heroPreview) URL.revokeObjectURL(heroPreview); }, [heroPreview]);
 
   useEffect(() => {
     fetchHeroImages();
@@ -62,6 +64,8 @@ export default function HeroAboutAdmin() {
   const handleHeroFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setErrors(previous => ({ ...previous, hero: 'Use JPEG, PNG or WebP images up to 5 MB.' })); return; }
+      setErrors(previous => ({ ...previous, hero: '' }));
       setHeroFile(file);
       setHeroPreview(URL.createObjectURL(file));
     }
@@ -99,13 +103,8 @@ export default function HeroAboutAdmin() {
     
     setLoading(prev => ({ ...prev, delete: true }));
     try {
+      await deleteImages([url]);
       await deleteDoc(doc(db, 'heroImages', id));
-      try {
-        const imageRef = ref(storage, url);
-        await deleteObject(imageRef);
-      } catch (err) {
-        console.warn('Could not delete image from storage:', err);
-      }
       fetchHeroImages();
     } catch (error) {
       alert('Failed to delete hero image');

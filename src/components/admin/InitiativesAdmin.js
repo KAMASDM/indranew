@@ -1,50 +1,25 @@
 'use client';
 import { useState } from 'react';
 import { db, storage } from '../../lib/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { imageUrls } from '@/lib/data.mjs';
+import { deleteImages } from '@/lib/media';
+import FilePreview from '../FilePreview';
 import LoadingSpinner from '../LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 
 // Modal for Adding/Editing an Initiative
 function InitiativeModal({ initiative, onClose, onSave }) {
-  // Delete a gallery image from Firebase Storage and update state
-  const handleDeleteGalleryImage = async (imgUrl, index) => {
-    if (!window.confirm('Are you sure you want to delete this image?')) return;
-    setLoading(true);
-    try {
-      await deleteObject(ref(storage, imgUrl));
-      const newGallery = [...formData.gallery];
-      newGallery.splice(index, 1);
-      setFormData({ ...formData, gallery: newGallery });
-    } catch (error) {
-      alert('Failed to delete image.');
-      console.error('Error deleting gallery image:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Removing an image changes the draft only; storage cleanup happens after Save.
+  const [removedImages, setRemovedImages] = useState([]);
+  const handleDeleteGalleryImage = (url, index) => {
+    setRemovedImages(previous => [...previous, url]);
+    setFormData(previous => ({ ...previous, gallery: previous.gallery.filter((_, i) => i !== index) }));
   };
-
-  // Delete main image from Firebase Storage and update state
-  const handleDeleteMainImage = async (imgUrl, index) => {
-    if (!window.confirm('Are you sure you want to delete this main image?')) return;
-    setLoading(true);
-    try {
-      await deleteObject(ref(storage, imgUrl));
-      let newImageUrl;
-      if (Array.isArray(formData.imageUrl)) {
-        newImageUrl = [...formData.imageUrl];
-        newImageUrl.splice(index, 1);
-      } else {
-        newImageUrl = '';
-      }
-      setFormData({ ...formData, imageUrl: newImageUrl });
-    } catch (error) {
-      alert('Failed to delete main image.');
-      console.error('Error deleting main image:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleDeleteMainImage = (url, index) => {
+    setRemovedImages(previous => [...previous, url]);
+    setFormData(previous => ({ ...previous, imageUrl: imageUrls(previous.imageUrl).filter((_, i) => i !== index) }));
   };
 
   const initialData = {
@@ -135,12 +110,15 @@ function InitiativeModal({ initiative, onClose, onSave }) {
     setSubmitError('');
     
     try {
+      const duplicate = await getDocs(query(collection(db, 'initiatives'), where('slug', '==', formData.slug)));
+      if (duplicate.docs.some(item => item.id !== formData.id)) throw new Error('Another initiative already uses this slug.');
+      if ([...mainImageFiles, ...galleryFiles].some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)) throw new Error('Use JPEG, PNG or WebP images up to 5 MB.');
       let mainImageUrls = formData.imageUrl ? (Array.isArray(formData.imageUrl) ? [...formData.imageUrl] : [formData.imageUrl]) : [];
       const initiativeId = formData.id || Date.now(); // Use existing ID or generate a temporary one for storage path
 
       if (mainImageFiles && mainImageFiles.length > 0) {
         for (const file of mainImageFiles) {
-          const storageRef = ref(storage, `initiatives/${initiativeId}/main_${file.name}`);
+          const storageRef = ref(storage, `initiatives/${initiativeId}/main_${crypto.randomUUID()}_${file.name}`);
           await uploadBytes(storageRef, file);
           const url = await getDownloadURL(storageRef);
           mainImageUrls.push(url);
@@ -167,6 +145,7 @@ function InitiativeModal({ initiative, onClose, onSave }) {
       }
       
       await onSave(initiativeData);
+      try { await deleteImages(removedImages); } catch (error) { alert(`Initiative saved. ${error.message}`); }
       onClose();
     } catch (error) {
       console.error("Error saving initiative:", error);
@@ -299,7 +278,7 @@ function InitiativeModal({ initiative, onClose, onSave }) {
                 {/* Show previews for all selected main images */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {mainImageFiles && mainImageFiles.length > 0 && mainImageFiles.map((file, i) => (
-                    <img key={i} src={URL.createObjectURL(file)} alt="Preview" width={80} height={60} className="rounded object-cover border" />
+                    <FilePreview key={i} file={file} alt="Preview" width={80} height={60} className="rounded object-cover border" />
                   ))}
                   {Array.isArray(formData.imageUrl) && formData.imageUrl.map((url, i) => (
                     url ? (
@@ -387,10 +366,7 @@ export default function InitiativesAdmin({ initiatives, fetchAllData }) {
     if (!window.confirm(`Are you sure you want to delete "${initiative.title}"? This action cannot be undone.`)) return;
     setLoadingDelete(true);
     try {
-      if(initiative.imageUrl) await deleteObject(ref(storage, initiative.imageUrl)).catch(e => console.error("Could not delete main image: ", e));
-      if(initiative.gallery && initiative.gallery.length > 0) {
-        await Promise.all(initiative.gallery.map(img => deleteObject(ref(storage, img.url)).catch(e => console.error("Could not delete gallery image: ", e))));
-      }
+      await deleteImages([...imageUrls(initiative.imageUrl), ...imageUrls(initiative.gallery)]);
       await deleteDoc(doc(db, 'initiatives', initiative.id));
       fetchAllData();
     } catch (error) {

@@ -1,13 +1,12 @@
 // Initiative Detail Page - Fully Integrated with Admin Fields
 'use client';
+import { renderContent } from '@/lib/content.mjs';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import Navbar from '../../../components/Navbar';
-import Footer from '../../../components/Footer';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 function InitiativeDetailPage() {
@@ -23,6 +22,7 @@ function InitiativeDetailPage() {
   useEffect(() => {
     const fetchInitiative = async () => {
       setLoading(true);
+      setRelatedInitiatives([]); setCurrentMainImageIndex(0); setSelectedImage(null);
       setError(null);
       try {
         // Try to fetch by slug field
@@ -89,14 +89,26 @@ function InitiativeDetailPage() {
     return [];
   };
 
+  useEffect(() => {
+    if (!selectedImage) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [selectedImage]);
+  useEffect(() => {
+    const close = event => { if (event.key === 'Escape') setSelectedImage(null); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
+
   const openLightbox = (imageUrl) => {
     setSelectedImage(imageUrl);
-    document.body.style.overflow = 'hidden';
+
   };
 
   const closeLightbox = () => {
     setSelectedImage(null);
-    document.body.style.overflow = 'auto';
+
   };
 
   // Improved color scheme for better contrast
@@ -144,7 +156,6 @@ function InitiativeDetailPage() {
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen flex flex-col">
-        <Navbar />
         <main className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
             <div className="inline-flex items-center space-x-4 bg-white rounded-2xl shadow-xl px-8 py-6 mb-8">
@@ -154,7 +165,6 @@ function InitiativeDetailPage() {
             <p className="text-gray-500">Gathering program information</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -162,7 +172,6 @@ function InitiativeDetailPage() {
   if (error || !initiative) {
     return (
       <div className="bg-gray-50 min-h-screen flex flex-col">
-        <Navbar />
         <main className="flex-1 flex items-center justify-center py-20">
           <div className="text-center max-w-md mx-auto px-6">
             <div className="w-32 h-32 mx-auto bg-red-100 rounded-3xl flex items-center justify-center mb-8">
@@ -183,7 +192,6 @@ function InitiativeDetailPage() {
             </Link>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -200,7 +208,6 @@ function InitiativeDetailPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-100 via-cyan-100 to-blue-100 text-gray-900 overflow-hidden">
@@ -350,7 +357,7 @@ function InitiativeDetailPage() {
                     <h2 className="text-3xl font-bold text-gray-900 mb-6">About This Initiative</h2>
                     <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
                       {initiative.longDescription ? (
-                        <div dangerouslySetInnerHTML={{ __html: initiative.longDescription }} />
+                        <div dangerouslySetInnerHTML={{ __html: renderContent(initiative.longDescription) }} />
                       ) : (
                         <p className="text-lg leading-relaxed">{initiative.description}</p>
                       )}
@@ -678,8 +685,6 @@ function InitiativeDetailPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }

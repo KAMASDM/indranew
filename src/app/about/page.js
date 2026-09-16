@@ -1,22 +1,26 @@
 // Enhanced src/app/about/page.js
 'use client';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import Image from '@/components/SafeImage';
 import ImpactStats from '../../components/ImpactStats';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const AboutPage = () => {
+  const [aboutContent, setAboutContent] = useState(null);
   const [activeTab, setActiveTab] = useState('story');
   const [loading, setLoading] = useState(true);
   const [visibleSection, setVisibleSection] = useState('');
 
   useEffect(() => {
-    // Simulate loading time for images and content
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    getDoc(doc(db, 'content', 'about')).then(snapshot => {
+      if (!cancelled && snapshot.exists()) setAboutContent(snapshot.data());
+    }).catch(error => console.error('Unable to load About content:', error))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -42,28 +46,28 @@ const AboutPage = () => {
       name: 'Honorable Mrs. Ranjanben Bhatt',
       role: 'Patron & Member of Parliament',
       description: 'Providing guidance and support to our foundation\'s mission and vision.',
-      image: '/team-ranjanben.jpg',
+      image: '/image-placeholder.svg',
       achievements: ['Member of Parliament', 'Community Leader', 'Social Reformer']
     },
     {
       name: 'Shri Jayendra Shah',
       role: 'Founder & Chairman',
       description: 'Visionary leader who started the foundation with a dream to serve humanity.',
-      image: '/team-jayendra.jpg',
+      image: '/image-placeholder.svg',
       achievements: ['Founder of Foundation', 'Community Service Award', '5+ Years Leadership']
     },
     {
       name: 'Mrs. Priya Patel',
       role: 'Program Director',
       description: 'Overseeing all our community programs and ensuring quality service delivery.',
-      image: '/team-priya.jpg',
+      image: '/image-placeholder.svg',
       achievements: ['Program Management', 'Community Outreach', 'Volunteer Coordination']
     },
     {
       name: 'Mr. Amit Sharma',
       role: 'Operations Manager',
       description: 'Managing day-to-day operations and logistics for all our initiatives.',
-      image: '/team-amit.jpg',
+      image: '/image-placeholder.svg',
       achievements: ['Operations Excellence', 'Logistics Management', 'Process Optimization']
     }
   ];
@@ -164,21 +168,18 @@ const AboutPage = () => {
   if (loading) {
     return (
       <div className="bg-white min-h-screen">
-        <Navbar />
         <div className="pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
             <LoadingSpinner size="xl" />
             <p className="text-gray-500 mt-4">Loading our story...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       <div className="pt-20">
         {/* Hero Section */}
         <section id="hero" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white relative overflow-hidden">
@@ -187,7 +188,7 @@ const AboutPage = () => {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div className="text-center lg:text-left">
                 <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                  About Indraprasth Foundation
+                  {aboutContent?.title || "About Indraprasth Foundation"}
                 </h1>
                 <p className="text-xl lg:text-2xl mb-8 opacity-90 leading-relaxed">
                   Our Journey, Our Mission, Our Commitment to Serving Humanity with Compassion
@@ -262,7 +263,7 @@ const AboutPage = () => {
               <div>
                 <h2 className="text-4xl font-bold text-gray-800 mb-6">Our Story</h2>
                 <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
-                  <p>
+                  {aboutContent?.description ? <p className="whitespace-pre-wrap">{aboutContent.description}</p> : <>                  <p>
                     Founded with a simple yet powerful vision, the Indraprasth Foundation is a charitable trust 
                     dedicated to uplifting the community of Vadodara. Our journey began with the 
                     <span className="font-semibold text-orange-600">&apos;Indraprasth nu Rasodu&apos;</span> 
@@ -278,6 +279,7 @@ const AboutPage = () => {
                     community service organization that addresses multiple facets of social need. We believe 
                     that every person deserves dignity, respect, and the opportunity to thrive.
                   </p>
+</>}
                 </div>
                 
                 {/* Story Highlights */}
@@ -338,9 +340,7 @@ const AboutPage = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-4">Our Vision</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  To create a self-reliant and equitable society where every individual has access to 
-                  basic necessities, education, and opportunities for growth, regardless of their 
-                  socio-economic background.
+                  {aboutContent?.vision || "To create a self-reliant and equitable society where every individual has access to basic necessities, education, and opportunities for growth, regardless of their socio-economic background."}
                 </p>
               </div>
 
@@ -350,9 +350,7 @@ const AboutPage = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-4">Our Mission</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  To undertake initiatives that provide immediate relief and foster long-term empowerment 
-                  for the underprivileged sections of our community. We believe in the power of collective 
-                  action and compassion.
+                  {aboutContent?.mission || "To undertake initiatives that provide immediate relief and long-term empowerment for the underprivileged sections of our community. We believe in the power of collective action and compassion."}
                 </p>
               </div>
             </div>
@@ -361,7 +359,7 @@ const AboutPage = () => {
             <div>
               <h3 className="text-3xl font-bold text-gray-800 text-center mb-12">Our Core Values</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {values.map((value, index) => (
+                {(aboutContent && Array.isArray(aboutContent.values) ? aboutContent.values.filter(Boolean).map(value => typeof value === 'string' ? { title: value, description: '', icon: '♥', color: 'from-teal-500 to-cyan-600' } : value) : values).map((value, index) => (
                   <div key={index} className="group text-center">
                     <div className={`w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r ${value.color} flex items-center justify-center text-white text-3xl group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       {value.icon}
@@ -487,7 +485,6 @@ const AboutPage = () => {
           </div>
         </section>
       </div>
-      <Footer />
     </div>
   );
 };

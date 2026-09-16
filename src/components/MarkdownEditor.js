@@ -1,5 +1,6 @@
 // MarkdownEditor.js
 'use client';
+import { renderContent } from '@/lib/content.mjs';
 import { useState } from 'react';
 
 export default function MarkdownEditor({ value, onChange }) {
@@ -18,7 +19,7 @@ export default function MarkdownEditor({ value, onChange }) {
           placeholder="Write your blog content in Markdown..."
         />
       ) : (
-        <div className="prose prose-lg max-w-none p-4 bg-gray-50 min-h-[200px]" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(value) : value }} />
+        <div className="prose prose-lg max-w-none p-4 bg-gray-50 min-h-[200px]" dangerouslySetInnerHTML={{ __html: renderContent(value) }} />
       )}
       <div className="text-xs text-gray-500 mt-2">Supports Markdown. For images: <code>![](image-url)</code></div>
     </div>

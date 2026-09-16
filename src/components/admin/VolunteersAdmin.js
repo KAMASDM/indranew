@@ -1,4 +1,5 @@
 'use client';
+import { toDate, formatDate, formatTime, downloadCsv } from '@/lib/data.mjs';
 import { useState } from 'react';
 import { db } from '../../lib/firebase';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -35,7 +36,7 @@ export default function VolunteersAdmin({ volunteers, fetchAllData }) {
       volunteer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       volunteer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       volunteer.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      volunteer.message?.toLowerCase().includes(searchQuery.toLowerCase());
+      (volunteer.motivation || volunteer.message)?.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesSearch;
   });
@@ -133,7 +134,7 @@ export default function VolunteersAdmin({ volunteers, fetchAllData }) {
                           {volunteer.name}
                         </h3>
                         <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                          Applied: {volunteer.submittedAt ? new Date(volunteer.submittedAt).toLocaleDateString() : 'N/A'}
+                          Applied: {volunteer.submittedAt ? formatDate(volunteer.submittedAt) : 'N/A'}
                         </div>
                       </div>
                       
@@ -165,7 +166,7 @@ export default function VolunteersAdmin({ volunteers, fetchAllData }) {
                         <div className="flex items-center">
                           <div className="text-xs text-gray-500">
                             <div className="bg-green-50 px-3 py-2 rounded-lg border border-green-100">
-                              <span className="font-medium text-green-800">Status:</span> New Application
+                              <span className="font-medium text-green-800">Status:</span> {volunteer.status || "pending"}
                             </div>
                           </div>
                         </div>
@@ -173,7 +174,10 @@ export default function VolunteersAdmin({ volunteers, fetchAllData }) {
                       
                       <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <p className="font-semibold text-gray-800 mb-2 text-sm">Volunteer Message:</p>
-                        <p className="text-gray-700 text-sm leading-relaxed">{volunteer.message}</p>
+                        <p className="text-gray-700 text-sm leading-relaxed">{volunteer.motivation || volunteer.message || "No message provided."}</p>
+                        <dl className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                          {['age', 'occupation', 'skills', 'availability', 'experience', 'emergencyContact', 'hearAboutUs'].map(field => <div key={field}><dt className="font-semibold text-gray-800">{{ age: 'Age', occupation: 'Occupation', skills: 'Skills', availability: 'Availability', experience: 'Experience', emergencyContact: 'Emergency contact', hearAboutUs: 'Referral source' }[field]}</dt><dd className="text-gray-700 whitespace-pre-wrap">{Array.isArray(volunteer[field]) ? volunteer[field].join(', ') : volunteer[field] || 'Not provided'}</dd></div>)}
+                        </dl>
                       </div>
                     </div>
                   </div>

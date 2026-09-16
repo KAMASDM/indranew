@@ -1,11 +1,10 @@
 // Enhanced src/app/gallery/page.js
 'use client';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy, where, limit, startAfter } from 'firebase/firestore';
-import Image from 'next/image';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { formatDate } from '@/lib/data.mjs';
+import Image from '@/components/SafeImage';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const GalleryPage = () => {
@@ -22,10 +21,14 @@ const GalleryPage = () => {
   const lastDocRef = useRef(null);
   const sentinelRef = useRef(null);
 
+  const requestVersion = useRef(0);
+  const fetchingMore = useRef(false);
+  const moreAvailable = useRef(true);
+  const [knownCategories, setKnownCategories] = useState([]);
   const IMAGES_PER_PAGE = 12;
 
   const categories = useMemo(() => {
-    const allCategories = new Set(images.map(image => image.category).filter(Boolean));
+    const allCategories = new Set(knownCategories);
     const uniqueCategories = [
       { id: 'all', name: 'All Photos', icon: '🖼️' },
       ...Array.from(allCategories).map(cat => ({
@@ -35,41 +38,30 @@ const GalleryPage = () => {
       }))
     ];
     return uniqueCategories;
-  }, [images]);
+  }, [knownCategories]);
 
-  const fetchImages = async (isLoadMore = false, category = selectedCategory) => {
+  const fetchImages = useCallback(async (isLoadMore = false, category = "all") => {
+    if (isLoadMore && (!moreAvailable.current || fetchingMore.current)) return;
+    const version = isLoadMore ? requestVersion.current : ++requestVersion.current;
+    fetchingMore.current = true;
     try {
       if (!isLoadMore) {
         setLoading(true);
         setImages([]);
         lastDocRef.current = null; // Reset ref
         setHasMore(true);
+        moreAvailable.current = true;
       } else {
-        if (!hasMore || loadingMore) return; // Prevent multiple fetches
         setLoadingMore(true);
       }
 
-      let q;
-      const galleryCollection = collection(db, 'gallery');
-
-      if (category === 'all') {
-        q = query(
-          galleryCollection,
-          orderBy('uploadedAt', 'desc'),
-          ...(isLoadMore && lastDocRef.current ? [startAfter(lastDocRef.current)] : []),
-          limit(IMAGES_PER_PAGE)
-        );
-      } else {
-        q = query(
-          galleryCollection,
-          where('category', '==', category),
-          orderBy('uploadedAt', 'desc'),
-          ...(isLoadMore && lastDocRef.current ? [startAfter(lastDocRef.current)] : []),
-          limit(IMAGES_PER_PAGE)
-        );
-      }
+      // One ordered cursor works for legacy images without a category as well.
+      // Filter each page locally so category browsing needs no composite index.
+      const q = query(collection(db, 'gallery'), orderBy('uploadedAt', 'desc'),
+        ...(isLoadMore && lastDocRef.current ? [startAfter(lastDocRef.current)] : []), limit(IMAGES_PER_PAGE));
 
       const querySnapshot = await getDocs(q);
+      if (version !== requestVersion.current) return;
       const imageData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -78,10 +70,13 @@ const GalleryPage = () => {
         uploadedAt: doc.data().uploadedAt || null
       }));
 
-      setImages(prev => (isLoadMore ? [...prev, ...imageData] : imageData));
+      setKnownCategories(previous => [...new Set([...previous, ...imageData.map(image => image.category)])]);
+      const visibleData = category === 'all' ? imageData : imageData.filter(image => image.category === category);
+      setImages(prev => (isLoadMore ? [...prev, ...visibleData] : visibleData));
       
       if (querySnapshot.docs.length < IMAGES_PER_PAGE) {
         setHasMore(false);
+        moreAvailable.current = false;
       }
 
       if (querySnapshot.docs.length > 0) {
@@ -90,22 +85,29 @@ const GalleryPage = () => {
 
       setError(null);
     } catch (err) {
+      if (version !== requestVersion.current) return;
       console.error("Error fetching images: ", err);
       setError("Failed to load gallery images. Please try again.");
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (version === requestVersion.current) {
+        fetchingMore.current = false;
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  };
+  }, []);
 
   // Effect for fetching on category change
   useEffect(() => {
     fetchImages(false, selectedCategory);
-  }, [selectedCategory]);
+    const versionRef = requestVersion;
+    return () => { versionRef.current++; };
+  }, [selectedCategory, fetchImages]);
 
   // Infinite scroll observer effect
   useEffect(() => {
-    if (!sentinelRef.current) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel || loading) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -116,14 +118,16 @@ const GalleryPage = () => {
       { threshold: 1.0 }
     );
 
-    observer.observe(sentinelRef.current);
+    observer.observe(sentinel);
 
     return () => {
-      if (sentinelRef.current) {
-        observer.unobserve(sentinelRef.current);
-      }
+      observer.disconnect();
     };
-  }, [hasMore, loadingMore, selectedCategory]);
+  }, [hasMore, loadingMore, selectedCategory, loading, fetchImages]);
+
+  useEffect(() => {
+    if (searchQuery.trim() && hasMore && !loading && !loadingMore) fetchImages(true, selectedCategory);
+  }, [searchQuery, hasMore, loading, loadingMore, selectedCategory, fetchImages]);
 
   // Filter images based on search query
   const filteredImages = useMemo(() => {
@@ -141,19 +145,15 @@ const GalleryPage = () => {
 
   const openLightbox = (image) => {
     setSelectedImg(image);
-    if (typeof window !== 'undefined' && document?.body) {
-      document.body.style.overflow = 'hidden';
-    }
+
   };
 
   const closeLightbox = () => {
     setSelectedImg(null);
-    if (typeof window !== 'undefined' && document?.body) {
-      document.body.style.overflow = 'auto';
-    }
+
   };
 
-  const navigateImage = (direction) => {
+  const navigateImage = useCallback((direction) => {
     if (!selectedImg) return;
     const currentIndex = filteredImages.findIndex(img => img.id === selectedImg.id);
     let newIndex;
@@ -163,7 +163,14 @@ const GalleryPage = () => {
       newIndex = currentIndex < filteredImages.length - 1 ? currentIndex + 1 : 0;
     }
     setSelectedImg(filteredImages[newIndex]);
-  };
+  }, [selectedImg, filteredImages]);
+
+  useEffect(() => {
+    if (!selectedImg) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [selectedImg]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -183,12 +190,11 @@ const GalleryPage = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImg, filteredImages]);
+  }, [selectedImg, navigateImage]);
 
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen">
-        <Navbar />
         <div className="pt-20">
           <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-20">
             <h1 className="text-5xl font-bold">Gallery</h1>
@@ -199,7 +205,6 @@ const GalleryPage = () => {
             <p className="text-gray-500 mt-4">Loading gallery...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -207,7 +212,6 @@ const GalleryPage = () => {
   if (error) {
     return (
       <div className="bg-gray-50 min-h-screen">
-        <Navbar />
         <div className="pt-20">
           <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-20">
             <h1 className="text-5xl font-bold">Gallery</h1>
@@ -226,14 +230,12 @@ const GalleryPage = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Navbar />
       <div className="pt-20">
         <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-20 relative overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-30"></div>
@@ -340,9 +342,9 @@ const GalleryPage = () => {
                       {image.caption && (
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 rounded-b-lg">
                           <p className="text-white text-sm font-medium">{image.caption}</p>
-                          {image.uploadedAt?.toDate && (
+                          {image.uploadedAt && (
                             <p className="text-white/70 text-xs mt-1">
-                              {new Date(image.uploadedAt.toDate()).toLocaleDateString()}
+                              {formatDate(image.uploadedAt)}
                             </p>
                           )}
                         </div>
@@ -357,16 +359,6 @@ const GalleryPage = () => {
                 ))}
               </div>
 
-              {hasMore && !searchQuery && (
-                <div ref={sentinelRef} className="text-center mt-12 h-10">
-                  {loadingMore && (
-                    <div className="flex items-center justify-center space-x-2">
-                      <LoadingSpinner size="sm" color="orange" />
-                      <span className="text-orange-500">Loading more...</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </>
           ) : (
             <div className="text-center py-16">
@@ -390,6 +382,9 @@ const GalleryPage = () => {
               </div>
             </div>
           )}
+          {hasMore && <div ref={sentinelRef} className="text-center mt-12">
+            <button disabled={loadingMore} onClick={() => fetchImages(true, selectedCategory)} className="bg-orange-600 text-white px-6 py-3 rounded-lg disabled:opacity-50">{loadingMore ? 'Loading more…' : 'Load more photos'}</button>
+          </div>}
         </main>
 
         {selectedImg && (
@@ -435,13 +430,9 @@ const GalleryPage = () => {
                 {selectedImg.caption && (
                   <div className="bg-black/70 text-white p-4 rounded-lg mt-4 max-w-2xl text-center">
                     <p className="text-lg font-medium">{selectedImg.caption}</p>
-                    {selectedImg.uploadedAt?.toDate && (
+                    {selectedImg.uploadedAt && (
                       <p className="text-sm text-gray-300 mt-2">
-                        {new Date(selectedImg.uploadedAt.toDate()).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {formatDate(selectedImg.uploadedAt)}
                       </p>
                     )}
                   </div>
@@ -456,7 +447,6 @@ const GalleryPage = () => {
           </div>
         )}
       </div>
-      <Footer />
     </div>
   );
 };

@@ -1,11 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
-import Footer from "../../components/Footer";
 import Link from "next/link";
 import { db } from "../../lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import Image from "next/image";
+import Image from '@/components/SafeImage';
 
 export default function BlogPage() {
   const [blogs, setBlogs] = useState([]);
@@ -31,7 +29,6 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-orange-50 to-white">
-      <Navbar />
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl font-extrabold text-orange-700 mb-6 text-center">Our Blog</h1>
@@ -56,7 +53,7 @@ export default function BlogPage() {
                 >
                   <div className="relative h-48 w-full mb-4 rounded-xl overflow-hidden">
                     <Image 
-                      src={blog.image && typeof blog.image === 'string' && blog.image.startsWith('http') ? blog.image : '/default-blog.jpg'}
+                      src={blog.image && typeof blog.image === 'string' && blog.image.startsWith('http') ? blog.image : '/image-placeholder.svg'}
                       alt={blog.title}
                       fill
                       className="object-cover" 
@@ -77,7 +74,6 @@ export default function BlogPage() {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

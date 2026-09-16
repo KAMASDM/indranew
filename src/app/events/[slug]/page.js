@@ -1,12 +1,11 @@
 'use client';
+import { toDate } from '@/lib/data.mjs';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import Navbar from '../../../components/Navbar';
-import Footer from '../../../components/Footer';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import Image from 'next/image';
+import Image from '@/components/SafeImage';
 import Link from 'next/link';
 
 const EventDetailPage = () => {
@@ -24,6 +23,7 @@ const EventDetailPage = () => {
   useEffect(() => {
     const fetchEvent = async () => {
       if (!slug) return;
+      setLoading(true); setError(null); setEvent(null); setSelectedImage(null);
 
       try {
         let foundEvent = null;
@@ -69,14 +69,26 @@ const EventDetailPage = () => {
     fetchEvent();
   }, [slug]);
 
+  useEffect(() => {
+    if (!selectedImage) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [selectedImage]);
+  useEffect(() => {
+    const close = event => { if (event.key === 'Escape') setSelectedImage(null); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
+
   const openLightbox = (imageUrl) => {
     setSelectedImage(imageUrl);
-    document.body.style.overflow = 'hidden';
+
   };
 
   const closeLightbox = () => {
     setSelectedImage(null);
-    document.body.style.overflow = 'auto';
+
   };
 
   const handleImageError = (index, error) => {
@@ -137,11 +149,9 @@ const EventDetailPage = () => {
   if (loading) {
     return (
       <div className="bg-white min-h-screen">
-        <Navbar />
         <div className="pt-20 min-h-screen flex items-center justify-center">
           <LoadingSpinner size="xl" />
         </div>
-        <Footer />
       </div>
     );
   }
@@ -149,7 +159,6 @@ const EventDetailPage = () => {
   if (error || !event) {
     return (
       <div className="bg-white min-h-screen">
-        <Navbar />
         <div className="pt-20 min-h-screen flex items-center justify-center">
           <div className="text-center max-w-md mx-auto">
             <h1 className="text-4xl font-bold text-gray-800 mb-4">Event Not Found</h1>
@@ -159,12 +168,11 @@ const EventDetailPage = () => {
             </Link>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  const eventDate = event.startDate ? new Date(event.startDate) : new Date();
+  const eventDate = event.startDate ? toDate(event.startDate) || new Date() : new Date();
   const isUpcoming = eventDate > new Date();
 
   // Split description into paragraphs
@@ -172,7 +180,6 @@ const EventDetailPage = () => {
 
   return (
     <div className="bg-cyan-50 min-h-screen">
-      <Navbar />
       <main className="pt-20">
         {/* Hero Section */}
         <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20 relative overflow-hidden">
@@ -435,7 +442,6 @@ const EventDetailPage = () => {
           </div>
         </div>
       </main>
-      <Footer />
 
       {/* Lightbox Modal */}
       {selectedImage && (
